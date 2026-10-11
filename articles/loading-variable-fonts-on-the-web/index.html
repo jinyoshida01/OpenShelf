@@ -1,0 +1,42 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Loading variable fonts on the web | Open Shelf</title><link rel="canonical" href="https://jinyoshida01.github.io/open-shelf/articles/loading-variable-fonts-on-the-web/"><link rel="stylesheet" href="../../styles.css"><link rel="icon" href="../../favicon.svg"><meta name="color-scheme" content="dark light"></head><body class="article-page"><a class="skip" href="#article">Skip to article</a><header class="top shell"><a class="brand" href="../../"><svg class="brand-mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 5v22h24M9 6v15h5V6zM18 8l5-1 3 14-5 1zM4 23h24"/></svg>Open Shelf</a><nav class="nav"><a href="../../#/knowledge">Knowledge library</a><a href="../../#/">Fonts</a></nav></header><main id="article" class="reading"><a class="back" href="../../#/knowledge">← All articles</a><h1>Loading variable fonts on the web</h1><div class="article-credit"><p>By Elliot Jay Stocks · Google Fonts Knowledge.</p><p>Reviewed by Bram Stein, Laurence Penney.</p><p><a href="https://fonts.google.com/knowledge/lesson/loading_variable_fonts_on_the_web">Original article</a> · <a href="https://github.com/google/fonts/blob/bd8f81ddb5c74d5c8897b36ad88b440266245103/cc-by-sa/knowledge/modules/using_type/lessons/loading_variable_fonts_on_the_web/content.md">Source on GitHub</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license">CC BY-SA 4.0</a>. Text, illustrations and existing credits reproduced from the licensed Knowledge repository. Open Shelf adapted the layout and links; these adaptations are also CC BY-SA 4.0. No endorsement implied.</p></div><div class="article-copy"><p>Using a <a href="../glossary-variable-fonts/">variable font</a> on our website is straightforward, but let’s break down each step in the process so we can see how it differs from using traditional <a href="../glossary-web-font/">web fonts</a>.</p>
+<p>First, we’ll need to choose a variable font, either from a <a href="../using-web-fonts-from-a-font-delivery-service/">font delivery service</a> such as Google Fonts, or one we’re choosing to <a href="../self-hosting-web-fonts/">self-host</a>.</p>
+<figure>
+<p><img alt="An abstract representation showing a font selected from a group of possibilities, and then a code block required to load the font." loading="lazy" src="../media/modules/using_type/lessons/loading_variable_fonts_on_the_web/images/thumbnail.svg"></p>
+</figure>
+<h2>Loading variable fonts from a font delivery service</h2>
+<p>If we’re using Google Fonts, we might be used to seeing this embed code for non-variable web fonts:</p>
+<pre><code>https://fonts.googleapis.com/css2?family=Oswald:wght@200;700&amp;display=swap
+</code></pre>
+<p>The <code>wght@200;700</code> part of that code will load the 200 and 700 weights of Oswald. But for variable fonts, we can specify a <em>range</em> of weights by turning that semi-colon into two periods:</p>
+<pre><code>https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&amp;display=swap
+</code></pre>
+<p>Easy! Of course, not all designs take advantage of the complete range of styles, but the real value of variable fonts is the ability to expand the range of our design while reducing the amount of font data transferred. In this case, we’d get the entire weight range of 200–700 for the equivalent of two or three individual styles—all in a single download.</p>
+<p>It’s also possible to specify just one particular weight value rather than a range. In this example, we load only the weight value of “284”:</p>
+<pre><code>https://fonts.googleapis.com/css2?family=Oswald:wght@284&amp;display=swap
+</code></pre>
+<p>The above examples load different weights, but it’s possible to load other variable axes, too. Check out our article <a href="../styling-type-on-the-web-with-variable-fonts/">“Styling type on the web with variable fonts.”</a></p>
+<p>(By the way, we’re only including code examples for Google Fonts because, at the time of writing, Adobe Fonts doesn’t serve variable fonts for web use.)</p>
+<h2>Loading variable fonts when self-hosting</h2>
+<p>As noted on our article on <a href="../self-hosting-web-fonts/">using self-hosted web fonts</a>, we need to set up some basic <code>@font-face</code> rules before we get into any actual typesetting. However, because variable fonts can operate over ranges of values, we need to express those ranges using CSS descriptors:</p>
+<ul>
+<li><code>font-stretch</code> (expressed as percentages), to control width;</li>
+<li>a potentially quite different value for <code>font-style</code> than what we’re used to (see the note below);</li>
+<li>and a range (rather than a single value) for <code>font-weight</code> to control weight.</li>
+</ul>
+<p>Here’s a template:</p>
+<pre><code>@font-face {
+  font-family: 'FAMILY_NAME';
+  font-stretch: PERCENTAGE_RANGE_LOW_TO_HIGH; /* Note that font-stretch is a % of normal width */
+  font-style: NORMAL_OR_ITALIC; /* See note below */
+  font-weight: NUMERIC_RANGE_LOW_TO_HIGH;
+  src: url(FONT_FILE_NAME.woff2) format('woff2');
+}
+</code></pre>
+<h3>A note on the new font-style conventions</h3>
+<p>Currently, <code>font-style</code> should only be specified for variable fonts in two scenarios:</p>
+<ul>
+<li>If we’re loading a font file that only contains <a href="../glossary-italic/">italics</a> (such as when loading <a href="../glossary-regular-upright/">upright</a> and italic font files, and grouping them with the same family name).</li>
+<li>If our variable font contains a “slant” axis but not an “italic” one.</li>
+</ul>
+<p>If we’re loading an italic-only font file, we need to use <code>font-style: italic;</code>. If we’re loading a font file with a slant axis, we have to specify the low and high degree values, such as <code>font-style: oblique 0deg 10deg;</code></p>
+<p>Due to some inconsistencies with how browsers handle variable font files that contain both italic <em>and</em> upright variants (and also files that contain both italic <em>and</em> slant axes), in these scenarios it’s best to omit the <code>font-style</code> line completely.</p></div><footer class="article-credit"><div class="article-credit"><p>By Elliot Jay Stocks · Google Fonts Knowledge.</p><p>Reviewed by Bram Stein, Laurence Penney.</p><p><a href="https://fonts.google.com/knowledge/lesson/loading_variable_fonts_on_the_web">Original article</a> · <a href="https://github.com/google/fonts/blob/bd8f81ddb5c74d5c8897b36ad88b440266245103/cc-by-sa/knowledge/modules/using_type/lessons/loading_variable_fonts_on_the_web/content.md">Source on GitHub</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license">CC BY-SA 4.0</a>. Text, illustrations and existing credits reproduced from the licensed Knowledge repository. Open Shelf adapted the layout and links; these adaptations are also CC BY-SA 4.0. No endorsement implied.</p></div><p>Last synced 2026-10-11. Open Shelf is an independent project, not affiliated with Google.</p></footer></main></body></html>

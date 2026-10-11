@@ -1,0 +1,207 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Styling type on the web with variable fonts | Open Shelf</title><link rel="canonical" href="https://jinyoshida01.github.io/open-shelf/articles/styling-type-on-the-web-with-variable-fonts/"><link rel="stylesheet" href="../../styles.css"><link rel="icon" href="../../favicon.svg"><meta name="color-scheme" content="dark light"></head><body class="article-page"><a class="skip" href="#article">Skip to article</a><header class="top shell"><a class="brand" href="../../"><svg class="brand-mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 5v22h24M9 6v15h5V6zM18 8l5-1 3 14-5 1zM4 23h24"/></svg>Open Shelf</a><nav class="nav"><a href="../../#/knowledge">Knowledge library</a><a href="../../#/">Fonts</a></nav></header><main id="article" class="reading"><a class="back" href="../../#/knowledge">← All articles</a><h1>Styling type on the web with variable fonts</h1><div class="article-credit"><p>By Elliot Jay Stocks · Google Fonts Knowledge.</p><p>Reviewed by Erik Spiekermann, Laurence Penney, Rosalie Wagner, Tyler Finck.</p><p><a href="https://fonts.google.com/knowledge/lesson/styling_type_on_the_web_with_variable_fonts">Original article</a> · <a href="https://github.com/google/fonts/blob/bd8f81ddb5c74d5c8897b36ad88b440266245103/cc-by-sa/knowledge/modules/using_type/lessons/styling_type_on_the_web_with_variable_fonts/content.md">Source on GitHub</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license">CC BY-SA 4.0</a>. Text, illustrations and existing credits reproduced from the licensed Knowledge repository. Open Shelf adapted the layout and links; these adaptations are also CC BY-SA 4.0. No endorsement implied.</p></div><div class="article-copy"><p>Whether loading <a href="../glossary-variable-fonts/">variable fonts</a> from a <a href="../using-web-fonts-from-a-font-delivery-service/">font delivery service</a> or <a href="../self-hosting-web-fonts/">our own server</a>, the actual styling of them via CSS is almost the same as standard, non-variable <a href="../glossary-font/">fonts</a>—with the addition of a new CSS property to control custom <a href="../glossary-axis-in-variable-fonts/">axes</a>.</p>
+<figure>
+<p><img alt="An abstract representation showing a font selected from a group of possibilities, and then a code block required to style the type, followed by a device showing the type rendered correctly." loading="lazy" src="../media/modules/using_type/lessons/styling_type_on_the_web_with_variable_fonts/images/thumbnail.svg"></p>
+</figure>
+<p>As we mentioned in our article <a href="../loading-variable-fonts-on-the-web/">“Loading variable fonts on the web,”</a> it’s possible to specify the axis we want to manipulate and load the <em>range</em> of that axis, as with this example for loading weights 200–700 of Oswald from Google Fonts:</p>
+<pre><code>https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&amp;display=swap
+</code></pre>
+<p>Now let’s consider other axes we can work with. The ones currently referenced in the CSS spec (i.e., widely supported in modern browsers) are <a href="../glossary-italic-axis/">Italic</a>, <a href="../glossary-optical-size-axis/">Optical Size</a>, <a href="../glossary-slant-axis/">Slant</a>, <a href="../glossary-weight-axis/">Weight</a>, and <a href="../glossary-width-axis/">Width</a>. (When using the Google Fonts API, be sure to list them alphabetically.) They’re mapped to CSS proper like so:</p>
+<table>
+<thead>
+<tr>
+<th>Axis &amp; Abbreviation:</th>
+<th>CSS attribute:</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Italic (ital)</td>
+<td>font-style</td>
+</tr>
+<tr>
+<td>Optical size (opsz)</td>
+<td>font-optical-sizing</td>
+</tr>
+<tr>
+<td>Slant (slnt)</td>
+<td>font-style</td>
+</tr>
+<tr>
+<td>Weight (wght)</td>
+<td>font-weight</td>
+</tr>
+<tr>
+<td>Width (wdth)</td>
+<td>font-stretch</td>
+</tr>
+</tbody>
+</table>
+<p>As you can see, the registered axes correlate to standard CSS properties that we’re used to. But we’re in no way restricted to using these registered axes. As we’ve discussed before, the <a href="../glossary-type-designer/">type designer</a> can choose to make any aspect of a <a href="../glossary-typeface/">typeface</a> design variable, and these custom axes can be referenced using the new CSS property <code>font-variation-settings</code> (see “Working with custom axes” below). This property is also useful in certain scenarios for the registered axes.</p>
+<h2>Registered axis: weight</h2>
+<figure>
+<p><img alt="Two side-by-side type specimens of the word “thicken”, each shown with a variable axis represented beneath as a horizontal slider. The first specimen, with the slider most of the way to the left to represent a lower value on the axis, shows a light weight with thin strokes. The second specimen, with the slider most of the way to the right to represent a higher value on the axis, shows a heavy weight with thick strokes." loading="lazy" src="../media/modules/using_type/lessons/styling_type_on_the_web_with_variable_fonts/images/weight.svg"></p>
+<figcaption>
+<p>The Weight axis in the typeface <a href="https://fonts.google.com/specimen/Epilogue">Epilogue</a></p>
+</figcaption>
+</figure>
+<p>Let’s assign a variable <strong><a href="../glossary-weight-axis/">weight</a></strong> property to some of our paragraph type and anything marked up as <code>strong</code>:</p>
+<pre><code>p {
+  font-weight: 350;
+}
+
+strong {
+  font-weight: 780;
+}
+</code></pre>
+<p>The only thing new about this CSS is that, unlike non-variable fonts, the <code>font-weight</code> values no longer have to be declared in units of 100. Rather than have body copy set in a regular weight, which would usually sit at 400, we can set it a little lighter, at 350. 300 is usually where a light weight might sit, so we’re effectively choosing a value that’s in between light and regular.</p>
+<p>Similarly, whereas <code>strong</code> text would usually be set in a bold weight, most often with a value of 700, we’re setting it at 780: heavier than a bold, but not quite as heavy as an extra bold—which would usually be the weight that sits at 800.</p>
+<h2>Registered axis: width</h2>
+<figure>
+<p><img alt="Two side-by-side type specimens of the word “spacious”, each shown with a variable axis represented beneath as a horizontal slider. The first specimen, with the slider most of the way to the left to represent a lower value on the axis, shows a very condensed version, taking up very little horziontal space. The second specimen, with the slider most of the way to the right to represent a higher value on the axis, is very wide." loading="lazy" src="../media/modules/using_type/lessons/styling_type_on_the_web_with_variable_fonts/images/width.svg"></p>
+<figcaption>
+<p>The Width axis in the typeface <a href="https://fonts.google.com/specimen/Anybody">Anybody</a></p>
+</figcaption>
+</figure>
+<p>Assigning a variable <strong><a href="../glossary-width-axis/">width</a></strong> property follows much the same pattern:</p>
+<pre><code>p {
+  font-stretch: 50%;
+}
+
+strong {
+  font-stretch: 193%;
+}
+</code></pre>
+<p>Here, our paragraph text will be quite narrow—50% is what the type designer has decided is half of the regular (100%) width—and the strong text will almost twice the width of the regular. Width values are always above 0, with 100% being the regular width.</p>
+<h2>Registered axes: italic and slant</h2>
+<figure>
+<p><img alt="Two side-by-side type specimens of the word phrase “lean-to”, each shown with a variable axis represented beneath as a horizontal slider. The first specimen, with the slider most of the way to the right to represent a higher value on the axis, shows upright forms. The second specimen, with the slider more to the left to represent a low-to-mid value on the axis, shows more slanted forms." loading="lazy" src="../media/modules/using_type/lessons/styling_type_on_the_web_with_variable_fonts/images/slant.svg"></p>
+<figcaption>
+<p>The Slant axis in the typeface <a href="https://fonts.google.com/specimen/Recursive">Recursive</a></p>
+</figcaption>
+</figure>
+<p>For setting variable <strong><a href="../glossary-italic-axis/">italic</a></strong> and <strong><a href="../glossary-slant-axis/">slant</a></strong> values, things are a little different, as these two properties are closely related.</p>
+<p>First, let’s deal with italics. Because true italics are original drawings rather than just slanted versions of the upright typeface, and some characters (e.g., a and g) have notably different italic forms, it often makes no sense to offer smooth variation between them. Therefore, the italic axis is usually effectively an on/off switch that links two separate font files.</p>
+<p>If the upright and italic versions sit in entirely separate font files, we can use standard CSS syntax for styling the italicized type:</p>
+<pre><code>body {
+  font-style: normal;
+}
+
+em {
+  font-style: italic;
+}
+</code></pre>
+<p>If, however, we have a single variable font that contains an italic axis, it’s currently necessary to use the low-level <code>font-variation-settings</code> syntax:</p>
+<pre><code>body {
+  font-variation-settings: 'ital' 0;
+}
+
+em {
+  font-variation-settings: 'ital' 1;
+}
+</code></pre>
+<p>It’s possible to have the upright and italic in the same font file, but in that case, it’s more likely the font would use the slant axis. And, for most situations, it currently makes sense to use the low-level <code>font-variation-settings</code> syntax to control slant, even if there’s no italic:</p>
+<pre><code>body {
+  font-variation-settings: 'slnt' 0;
+}
+
+.oblique {
+  font-variation-settings: 'slnt' -12;
+}
+</code></pre>
+<p>It’s fair to say that the close relationship between the italic and slant axes, the differences between the high-level and low-level syntaxes, and the (currently) inconsistent browser implementation of the CSS spec mean there are more than a few nuances! Fortunately, Stephen Nixon, designer of the <a href="https://www.recursive.design">Recursive</a> typeface, has put together a test page on <a href="https://arrowtype.github.io/vf-slnt-test/slnt-ital-tests/index.html">arrowtype.github.io</a>.</p>
+<h2>Registered axis: optical size</h2>
+<figure>
+<p><img alt="Two side-by-side type specimens of the word “glaze”, each shown with a variable axis represented beneath as a horizontal slider. The first specimen, with the slider most of the way to the left to represent a lower value on the axis, shows a small (or body-like) optical size. The second specimen, with the slider most of the way to the right to represent a higher value on the axis, shows a large (or display-like) optical size, with a shorter x-height and greater stroke contrast." loading="lazy" src="../media/modules/using_type/lessons/styling_type_on_the_web_with_variable_fonts/images/optical_size.svg"></p>
+<figcaption>
+<p>The Optical Size axis in the typeface <a href="https://github.com/googlefonts/amstelvar">Amstelvar</a></p>
+</figcaption>
+</figure>
+<p>The last registered axis we’ll look at is <strong><a href="../glossary-optical-size-axis/">optical size</a></strong>. The concept is that the numeric value for this axis should match the rendered font size in px, and a new CSS attribute was introduced to go along with it: <code>font-optical-sizing</code>. The default is <code>auto</code>, so this CSS is already pre-loaded behavior in all modern browsers:</p>
+<pre><code>body {
+  font-optical-sizing: auto;
+}
+</code></pre>
+<p>We can change it to <code>none</code>, but it is more common to leave that property on and instead set an explicit value by using <code>font-variation-settings</code>, like so:</p>
+<pre><code>body {
+  font-variation-settings: 'opsz' 16;
+}
+
+h1 {
+  font-variation-settings: 'opsz' 48;
+}
+</code></pre>
+<h2>Working with custom axes</h2>
+<p>As we’ve explored in our article <a href="../introducing-variable-fonts/">“Introducing variable fonts,”</a> it’s possible for a type designer to assign almost any aspect of a typeface’s design to a variable axis, no matter how inventive. In the Recursive typeface, one of the custom axes is “Casual,” (<code>CASL</code>) which makes the font shift from a typical sans serif design to one that looks more like freehand sign-painting.</p>
+<p>Using custom axes is straightforward, but in <em>all</em> scenarios we need to use the <code>font-variation-settings</code> property:</p>
+<pre><code>p {
+  font-variation-settings: 'CASL' 0.15;
+}
+
+span {
+  font-variation-settings: 'CASL' 0.86;
+}
+</code></pre>
+<p>We should always refer to the documentation provided by our chosen font’s <a href="../glossary-type-foundry/">foundry</a> for the correct four-character axis name, and be sure to reference any custom axis in UPPERCASE. In line with the current CSS spec, only the OpenType registered variable axes (those five demonstrated in the first part of this article) should appear in lowercase. Also, if we’re using the Google Fonts API, the uppercase axes have to appear first in the URL.</p>
+<h2>Progressive enhancement &amp; legacy browser support</h2>
+<p>To support the broadest set of browsers and devices, it’s advisable to set up our CSS with standard values first, and the variable styles within an <code>@supports</code> block. The Google Fonts API is smart enough to <a href="https://developers.google.com/fonts/docs/css2#legacy_browser_support">supply the static font files if the browser doesn’t support variable ones</a>, so all we have to do is manage the CSS side of the equation. If we’re using an alternative font delivery service or hosting the fonts ourselves, we just need to add a reference to the variable font family inside the <code>@supports</code> block.</p>
+<p>Adding in the <code>font-synthesis: none</code> declaration prevents browsers from <a href="../glossary-faux-fake-pseudo-synthesized/">artificially bolding or italicizing the font</a>, which can lead to unexpected and less-than-ideal results.</p>
+<pre><code>p {
+  font-synthesis: none;
+  font-weight: normal;
+}
+
+strong {
+  font-synthesis: none;
+  font-weight: bold;
+}
+
+@supports (font-variation-settings: normal) {
+  p {
+    font-weight: 350;
+  }
+  strong {
+    font-weight: 575;
+  }
+}
+</code></pre>
+<p>Lastly, it can be be useful to simplify our usage of <code>font-variation-settings</code> using a CSS custom property (also known as a CSS variable) so that we can alter only the axis’ value without having to redeclare the entire <code>font-variation-settings</code> string (which is especially useful to avoid the <a href="https://pixelambacht.nl/2019/fixing-variable-font-inheritance/">variable font inheritance problem outlined  by Roel Nieskens</a>).</p>
+<p>Here’s an example for controlling the italic axis...</p>
+<pre><code>:root {
+  --text-ital: 0;
+}
+
+body {
+  font-variation-settings: 'ital' var(--text-ital);
+}
+
+em {
+  --text-ital: 1;
+}
+</code></pre>
+<p>... the slant axis...</p>
+<pre><code>:root {
+  --text-slnt: 0;
+}
+
+body {
+  font-variation-settings: 'slnt' var(--text-slnt);
+}
+
+.oblique {
+  --text-slnt: 12;
+}
+</code></pre>
+<p>... and the optical size axis:</p>
+<pre><code>:root {
+  --text-opsz: 16;
+}
+
+body {
+  font-variation-settings: 'opsz' var(--text-opsz);
+}
+
+h1 {
+  --text-opsz: 48;
+}
+</code></pre>
+<p>Note that none of that is necessary to get started with controlling variable fonts, however—it might just save us time once we’re comfortable with the basics.</p><h2>Related content from the original article</h2><ul><li><a href="https://www.youtube.com/embed/SXxI0fLtQyE">https://www.youtube.com/embed/SXxI0fLtQyE</a></li></ul></div><footer class="article-credit"><div class="article-credit"><p>By Elliot Jay Stocks · Google Fonts Knowledge.</p><p>Reviewed by Erik Spiekermann, Laurence Penney, Rosalie Wagner, Tyler Finck.</p><p><a href="https://fonts.google.com/knowledge/lesson/styling_type_on_the_web_with_variable_fonts">Original article</a> · <a href="https://github.com/google/fonts/blob/bd8f81ddb5c74d5c8897b36ad88b440266245103/cc-by-sa/knowledge/modules/using_type/lessons/styling_type_on_the_web_with_variable_fonts/content.md">Source on GitHub</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license">CC BY-SA 4.0</a>. Text, illustrations and existing credits reproduced from the licensed Knowledge repository. Open Shelf adapted the layout and links; these adaptations are also CC BY-SA 4.0. No endorsement implied.</p></div><p>Last synced 2026-10-11. Open Shelf is an independent project, not affiliated with Google.</p></footer></main></body></html>

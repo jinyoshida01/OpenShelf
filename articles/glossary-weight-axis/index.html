@@ -1,0 +1,37 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Weight axis (wght) | Open Shelf</title><link rel="canonical" href="https://jinyoshida01.github.io/open-shelf/articles/glossary-weight-axis/"><link rel="stylesheet" href="../../styles.css"><link rel="icon" href="../../favicon.svg"><meta name="color-scheme" content="dark light"></head><body class="article-page"><a class="skip" href="#article">Skip to article</a><header class="top shell"><a class="brand" href="../../"><svg class="brand-mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 5v22h24M9 6v15h5V6zM18 8l5-1 3 14-5 1zM4 23h24"/></svg>Open Shelf</a><nav class="nav"><a href="../../#/knowledge">Knowledge library</a><a href="../../#/">Fonts</a></nav></header><main id="article" class="reading"><a class="back" href="../../#/knowledge">← All articles</a><h1>Weight axis (wght)</h1><div class="article-credit"><p>By Google Fonts Knowledge contributors · Google Fonts Knowledge.</p><p><a href="https://fonts.google.com/knowledge/glossary/weight_axis">Original article</a> · <a href="https://github.com/google/fonts/blob/bd8f81ddb5c74d5c8897b36ad88b440266245103/cc-by-sa/knowledge/glossary/terms/weight_axis/content.md">Source on GitHub</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license">CC BY-SA 4.0</a>. Text, illustrations and existing credits reproduced from the licensed Knowledge repository. Open Shelf adapted the layout and links; these adaptations are also CC BY-SA 4.0. No endorsement implied.</p></div><div class="article-copy"><p>“Weight” (<code>wght</code> in CSS) is an <a href="../glossary-axis-in-variable-fonts/">axis</a> found in many <a href="../glossary-variable-fonts/">variable fonts</a>. It controls the <a href="../glossary-font/">font</a> file’s <a href="../glossary-weight/">weight</a> parameter.</p>
+<p>The <a href="https://developers.google.com/fonts/docs/css2">Google Fonts CSS v2 API</a> defines the axis as:</p>
+<table>
+<thead>
+<tr>
+<th>Default:</th>
+<th>Min:</th>
+<th>Max:</th>
+<th>Step:</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>400</td>
+<td>1</td>
+<td>1000</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<figure>
+<p><img alt="Two side-by-side type specimens of the word “thicken”, each shown with a variable axis represented beneath as a horizontal slider. The first specimen, with the slider most of the way to the left to represent a lower value on the axis, shows a light weight with thin strokes. The second specimen, with the slider most of the way to the right to represent a higher value on the axis, shows a heavy weight with thick strokes." loading="lazy" src="../media/glossary/terms/weight_axis/images/thumbnail.svg"></p>
+<figcaption>
+<p>Typeface: <a href="https://fonts.google.com/specimen/Epilogue">Epilogue</a></p>
+</figcaption>
+</figure>
+<p>Weight is the overall thickness of a <a href="../glossary-typeface/">typeface</a>’s <a href="../glossary-stroke/">strokes</a> in any given font. The most common weights are <a href="../glossary-regular-upright/">regular</a> and <a href="../glossary-bold/">bold</a>, but weights can cover extremes from the very light to the very heavy. With the weight axis in variable fonts, the number of instances or weights is effectively unlimited.</p>
+<p>In CSS, we can assign a variable weight property to an element of our choosing:</p>
+<pre><code>p {
+  font-weight: 350;
+}
+strong {
+  font-weight: 780;
+}
+</code></pre>
+<p>Unlike in non-variable fonts, the <code>font-weight</code> values no longer have to be declared in units of 100. Rather than have <a href="../glossary-text-copy/">body copy</a> set in a Regular weight, which would usually sit at 400, we can set it a little lighter, at 350. Similarly, whereas <code>strong</code> text would usually be set in a Bold weight, we’re setting it at 780: heavier than a Bold (700), but not quite as heavy as an ExtraBold (800).</p>
+<p>In line with the current CSS spec, the four-character code for this axis should be referenced in UPPERCASE (as only the five axes registered in the OpenType format specification should appear in lowercase). Also, when using the Google Fonts API, the lowercase axes have to appear first in the URL, followed by the uppercase, each in alphabetical order.</p></div><footer class="article-credit"><div class="article-credit"><p>By Google Fonts Knowledge contributors · Google Fonts Knowledge.</p><p><a href="https://fonts.google.com/knowledge/glossary/weight_axis">Original article</a> · <a href="https://github.com/google/fonts/blob/bd8f81ddb5c74d5c8897b36ad88b440266245103/cc-by-sa/knowledge/glossary/terms/weight_axis/content.md">Source on GitHub</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license">CC BY-SA 4.0</a>. Text, illustrations and existing credits reproduced from the licensed Knowledge repository. Open Shelf adapted the layout and links; these adaptations are also CC BY-SA 4.0. No endorsement implied.</p></div><p>Last synced 2026-10-11. Open Shelf is an independent project, not affiliated with Google.</p></footer></main></body></html>

@@ -1,0 +1,42 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Optical Size axis (opsz) | Open Shelf</title><link rel="canonical" href="https://jinyoshida01.github.io/open-shelf/articles/glossary-optical-size-axis/"><link rel="stylesheet" href="../../styles.css"><link rel="icon" href="../../favicon.svg"><meta name="color-scheme" content="dark light"></head><body class="article-page"><a class="skip" href="#article">Skip to article</a><header class="top shell"><a class="brand" href="../../"><svg class="brand-mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 5v22h24M9 6v15h5V6zM18 8l5-1 3 14-5 1zM4 23h24"/></svg>Open Shelf</a><nav class="nav"><a href="../../#/knowledge">Knowledge library</a><a href="../../#/">Fonts</a></nav></header><main id="article" class="reading"><a class="back" href="../../#/knowledge">← All articles</a><h1>Optical Size axis (opsz)</h1><div class="article-credit"><p>By Google Fonts Knowledge contributors · Google Fonts Knowledge.</p><p><a href="https://fonts.google.com/knowledge/glossary/optical_size_axis">Original article</a> · <a href="https://github.com/google/fonts/blob/bd8f81ddb5c74d5c8897b36ad88b440266245103/cc-by-sa/knowledge/glossary/terms/optical_size_axis/content.md">Source on GitHub</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license">CC BY-SA 4.0</a>. Text, illustrations and existing credits reproduced from the licensed Knowledge repository. Open Shelf adapted the layout and links; these adaptations are also CC BY-SA 4.0. No endorsement implied.</p></div><div class="article-copy"><p>“Optical Size” (controlled with <code>font-optical-sizing</code> or <code>font-variation-setting: ‘opsz’ VALUE</code> in CSS) is an <a href="../glossary-axis-in-variable-fonts/">axis</a> found in some <a href="../glossary-variable-fonts/">variable fonts</a>. It controls the <a href="../glossary-font/">font</a> file’s <a href="../glossary-optical-sizes/">optical size</a> optimizations.</p>
+<p>The <a href="https://developers.google.com/fonts/docs/css2">Google Fonts CSS v2 API</a> defines the axis as:</p>
+<table>
+<thead>
+<tr>
+<th>Default:</th>
+<th>Min:</th>
+<th>Max:</th>
+<th>Step:</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>14</td>
+<td>6</td>
+<td>144</td>
+<td>0.1</td>
+</tr>
+</tbody>
+</table>
+<figure>
+<p><img alt="Two side-by-side type specimens of the word “glaze”, each shown with a variable axis represented beneath as a horizontal slider. The first specimen, with the slider most of the way to the left to represent a lower value on the axis, shows a small (or body-like) optical size. The second specimen, with the slider most of the way to the right to represent a higher value on the axis, shows a large (or display-like) optical size, with a shorter x-height and greater stroke contrast." loading="lazy" src="../media/glossary/terms/optical_size_axis/images/thumbnail.svg"></p>
+<figcaption>
+<p>Typeface: <a href="https://github.com/googlefonts/amstelvar">Amstelvar</a></p>
+</figcaption>
+</figure>
+<p>Optical sizes in a variable font are different versions of a <a href="../glossary-typeface/">typeface</a> optimized for use at singular specific sizes, such as 14 pt or 144 pt. Small (or <a href="../glossary-body/">body</a>) optical sizes tend to have less <a href="../glossary-stroke/">stroke</a> <a href="../glossary-contrast/">contrast</a>, more open and wider spacing, and a taller <a href="../glossary-x-height/">x-height</a> than those of their large (or <a href="../glossary-display/">display</a>) counterparts.</p>
+<p>The concept is that the numeric value for this axis should match the rendered font size in typographic points (1/72nd of an inch) in print, although browsers instead match it to the CSS <code>px</code> unit, since they have no concept of physical size. A new CSS attribute was introduced to go along with it: <code>font-optical-sizing</code>. The default is <code>auto</code>, and this is supported behavior in all modern browsers.</p>
+<pre><code>body {
+  font-optical-sizing: auto;
+}
+</code></pre>
+<p>We can force it to <code>none</code> if we’d prefer to turn it off, or we can set an explicit <code>px</code> value by using <code>font-variation-settings</code>, like so:</p>
+<pre><code>body {
+  font-variation-settings: 'opsz' 16;
+}
+h1 {
+  font-variation-settings: 'opsz' 48;
+}
+</code></pre>
+<p>The changes made across an Optical Size axis are intended by typeface designers to optimize the type, but parametric axes can be used to further adjust and fine-tune things. Explore more in our article, <a href="../introducing-parametric-axes/">“Introducing parametric axes.”</a></p>
+<p>In line with the current CSS spec, the four-character code for this axis should be referenced in lowercase (as only the five axes registered in the OpenType format specification should appear in lowercase). Also, when using the Google Fonts API, the lowercase axes have to appear first in the URL, followed by the uppercase, each in alphabetical order.</p></div><footer class="article-credit"><div class="article-credit"><p>By Google Fonts Knowledge contributors · Google Fonts Knowledge.</p><p><a href="https://fonts.google.com/knowledge/glossary/optical_size_axis">Original article</a> · <a href="https://github.com/google/fonts/blob/bd8f81ddb5c74d5c8897b36ad88b440266245103/cc-by-sa/knowledge/glossary/terms/optical_size_axis/content.md">Source on GitHub</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license">CC BY-SA 4.0</a>. Text, illustrations and existing credits reproduced from the licensed Knowledge repository. Open Shelf adapted the layout and links; these adaptations are also CC BY-SA 4.0. No endorsement implied.</p></div><p>Last synced 2026-10-11. Open Shelf is an independent project, not affiliated with Google.</p></footer></main></body></html>

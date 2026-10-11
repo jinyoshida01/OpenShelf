@@ -1,0 +1,72 @@
+name: Publish Open Shelf
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '23 3 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: open-shelf-pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install content tools
+        run: pip install -r scripts/requirements.txt
+      - uses: actions/cache@v4
+        if: github.event_name != 'push'
+        with:
+          path: .cache
+          key: knowledge-${{ github.run_id }}
+          restore-keys: knowledge-
+      - name: Refresh fonts and licensed articles
+        if: github.event_name != 'push'
+        run: python scripts/sync.py
+      - name: Validate generated site
+        run: |
+          python -m unittest discover -s scripts -p 'test_*.py'
+          node --check app.js
+          node --check local-fonts.js
+          node --check knowledge.js
+          node scripts/test-loading.cjs
+      - name: Save refreshed snapshot
+        if: github.event_name != 'push'
+        run: |
+          git config user.name "Open Shelf updates"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/catalog.js data/catalog.json data/knowledge.js articles sitemap.xml
+          if ! git diff --cached --quiet; then
+            git commit -m "Content: Refresh fonts and Knowledge articles"
+            git push
+          fi
+      - name: Prepare public files
+        run: |
+          mkdir _site
+          cp index.html 404.html app.js styles.css knowledge.js local-fonts.js favicon.svg *.png robots.txt sitemap.xml site.webmanifest .nojekyll _site/
+          cp -R data articles _site/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@v4

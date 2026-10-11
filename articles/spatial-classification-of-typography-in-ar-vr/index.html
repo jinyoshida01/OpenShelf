@@ -1,0 +1,97 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Spatial classification of typography in AR/VR | Open Shelf</title><link rel="canonical" href="https://jinyoshida01.github.io/open-shelf/articles/spatial-classification-of-typography-in-ar-vr/"><link rel="stylesheet" href="../../styles.css"><link rel="icon" href="../../favicon.svg"><meta name="color-scheme" content="dark light"></head><body class="article-page"><a class="skip" href="#article">Skip to article</a><header class="top shell"><a class="brand" href="../../"><svg class="brand-mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 5v22h24M9 6v15h5V6zM18 8l5-1 3 14-5 1zM4 23h24"/></svg>Open Shelf</a><nav class="nav"><a href="../../#/knowledge">Knowledge library</a><a href="../../#/">Fonts</a></nav></header><main id="article" class="reading"><a class="back" href="../../#/knowledge">← All articles</a><h1>Spatial classification of typography in AR/VR</h1><div class="article-credit"><p>By Niteesh Yadav · Google Fonts Knowledge.</p><p>Reviewed by Andrew Johnson, Gerry Leonidas.</p><p><a href="https://fonts.google.com/knowledge/lesson/spatial_classification_of_typography_in_ar_vr">Original article</a> · <a href="https://github.com/google/fonts/blob/bd8f81ddb5c74d5c8897b36ad88b440266245103/cc-by-sa/knowledge/modules/using_type_in_ar_and_vr/lessons/spatial_classification_of_typography_in_ar_vr/content.md">Source on GitHub</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license">CC BY-SA 4.0</a>. Text, illustrations and existing credits reproduced from the licensed Knowledge repository. Open Shelf adapted the layout and links; these adaptations are also CC BY-SA 4.0. No endorsement implied.</p></div><div class="article-copy"><p>Let’s group some of the concepts we’ve discussed in previous articles from <a href="https://fonts.google.com/module/using_type_in_ar_and_vr">this module</a> into spatial classifications. This can help with considerations for choosing <a href="../glossary-typeface/">typefaces</a>, <a href="../glossary-typesetting/">setting text</a>, and even designing typefaces for different applications. This classification may also help with picking the most appropriate rendering methods (see <a href="../designing-for-ar-vr/">“Designing for AR/VR”</a>) for displaying text in AR/VR experiences.</p>
+<p>For example, <a href="../glossary-text-copy/">text</a> belonging to the “Text in HUD” category remains fixed in size, so the standard textures of each size can be used without a loss in resolution as people move closer to the text. On the other hand, text in the “Sticky info text” category requires a higher resolution, since people have control over their distance from the text and can move toward or away from it. This classification can also help with exploring the application of <a href="../glossary-variable-fonts/">variable fonts</a> across different cases (again, for more, see <a href="../designing-for-ar-vr/">“Designing for AR/VR”</a>).</p>
+<table>
+<thead>
+<tr>
+<th>Type of text:</th>
+<th>Position:</th>
+<th>Viewing angle:</th>
+<th>Text state:</th>
+<th>User’s state:</th>
+<th>Examples:</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>“Text in HUD”</td>
+<td>HUD region</td>
+<td>Fixed</td>
+<td>Stationary, moving</td>
+<td>Still, moving</td>
+<td>Time, notifications, text updates, music track name</td>
+</tr>
+<tr>
+<td>“Text for long reading”</td>
+<td>UI/interaction region</td>
+<td>Fixed, variable</td>
+<td>Stationary</td>
+<td>Still</td>
+<td>Descriptions, articles, long-form reading</td>
+</tr>
+<tr>
+<td>“Sticky info text”</td>
+<td>UI/interaction region</td>
+<td>Variable</td>
+<td>Stationary</td>
+<td>Still</td>
+<td>Info over real-world objects</td>
+</tr>
+<tr>
+<td>“Signage text”</td>
+<td>Environment region</td>
+<td>Variable</td>
+<td>Stationary</td>
+<td>Still, moving</td>
+<td>Signages, billboards</td>
+</tr>
+<tr>
+<td>“Responsive text”</td>
+<td>UI/interaction region, environment region</td>
+<td>Variable</td>
+<td>Stationary, moving</td>
+<td>Still, moving</td>
+<td>Navigation markers, responsive ads</td>
+</tr>
+<tr>
+<td>“Ticker text”</td>
+<td>HUD region, environment region</td>
+<td>Fixed, variable</td>
+<td>Moving</td>
+<td>Still, moving</td>
+<td>News, long-running info, ads</td>
+</tr>
+</tbody>
+</table>
+<h2>Text in HUD</h2>
+<p>In this case, text sticks to the field of the view and moves with head movement.</p>
+<figure>
+<p><img alt="A simulation of an AR/VR experience, with text-based information overlaid on top of the real and/or virtual environment." loading="lazy" src="../media/modules/using_type_in_ar_and_vr/lessons/spatial_classification_of_typography_in_ar_vr/images/spatial_classification_of_typography_in_ar_vr_1.svg"></p>
+</figure>
+<h2>Text for long reading</h2>
+<p>Text should, ideally, be placed in the UI region for a better reading experience within the range of five meters. This allows people to move text in order to optimize the distance based on their reading preferences.</p>
+<figure>
+<p><img alt="A simulation of a person wearing AR goggles, reading long-form text inside the AR experience." loading="lazy" src="../media/modules/using_type_in_ar_and_vr/lessons/spatial_classification_of_typography_in_ar_vr/images/spatial_classification_of_typography_in_ar_vr_2.png"></p>
+</figure>
+<h2>Sticky info text</h2>
+<p>Text that’s anchored to real-world objects (usually in a close range—up to a few meters away from the subject) has a fixed orientation. It may change position and direction based on how people interact with the real-world object the text is anchored to.</p>
+<figure>
+<p><img alt="A simulation of text-based information overlaid on a real-world object (a box held by a human hand) in an AR experience." loading="lazy" src="../media/modules/using_type_in_ar_and_vr/lessons/spatial_classification_of_typography_in_ar_vr/images/spatial_classification_of_typography_in_ar_vr_3.png"></p>
+</figure>
+<h2>Signage text</h2>
+<p>Similar to the sticky info text, this is anchored to real-world objects, but in this case the user can’t move or change the orientation of the object. The information is anchored to macro-level objects such as geo-location, buildings, and vehicles.</p>
+<figure>
+<p><img alt="A simulation of an AR experience, with interactive restaurant information (including a “see menu” button) overlaid on the real-world environment." loading="lazy" src="../media/modules/using_type_in_ar_and_vr/lessons/spatial_classification_of_typography_in_ar_vr/images/spatial_classification_of_typography_in_ar_vr_4.png"></p>
+</figure>
+<h2>Responsive text</h2>
+<p>This can be placed in both UI and environment regions where the text changes its orientation (perspective) based on peoples’ movements or specific programmed behaviors, as shown below.</p>
+<figure>
+<p><img alt="A simulation of an AR experience, where a moving arrow (with text labels) is overlaid on top of the real-world environment." loading="lazy" src="../media/modules/using_type_in_ar_and_vr/lessons/spatial_classification_of_typography_in_ar_vr/images/spatial_classification_of_typography_in_ar_vr_5.png"></p>
+</figure>
+<h2>Ticker text</h2>
+<p>The term “ticker” comes from news tickers: an element with moving text that’s secondary to the main environment or task the user performs. This is a useful method to attract attention and show more information in a small area, such as notifications in HUD, or showing information in supermarkets.</p>
+<figure>
+<p><img alt="A simulation of an AR/VR experience, with text-based information overlaid on top of the real and/or virtual environment, with ticket text highlighted." loading="lazy" src="../media/modules/using_type_in_ar_and_vr/lessons/spatial_classification_of_typography_in_ar_vr/images/spatial_classification_of_typography_in_ar_vr_6.svg"></p>
+</figure>
+<p>Useful links:
+- <a href="https://youtu.be/lFO5A8-FzlI?t=1636">Future of Typography in Augmented Reality</a>
+- <a href="https://niteeshyadav.com/blog/typography-classification-in-augmented-reality-v1-1-8760/">Typography Classification in Augmented Reality v1.1</a></p></div><footer class="article-credit"><div class="article-credit"><p>By Niteesh Yadav · Google Fonts Knowledge.</p><p>Reviewed by Andrew Johnson, Gerry Leonidas.</p><p><a href="https://fonts.google.com/knowledge/lesson/spatial_classification_of_typography_in_ar_vr">Original article</a> · <a href="https://github.com/google/fonts/blob/bd8f81ddb5c74d5c8897b36ad88b440266245103/cc-by-sa/knowledge/modules/using_type_in_ar_and_vr/lessons/spatial_classification_of_typography_in_ar_vr/content.md">Source on GitHub</a> · <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license">CC BY-SA 4.0</a>. Text, illustrations and existing credits reproduced from the licensed Knowledge repository. Open Shelf adapted the layout and links; these adaptations are also CC BY-SA 4.0. No endorsement implied.</p></div><p>Last synced 2026-10-11. Open Shelf is an independent project, not affiliated with Google.</p></footer></main></body></html>
