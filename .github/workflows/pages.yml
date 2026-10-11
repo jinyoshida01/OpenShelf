@@ -21,15 +21,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install content tools
-        run: pip install -r scripts/requirements.txt
       - uses: actions/cache@v4
         if: github.event_name != 'push'
         with:
           path: .cache
           key: knowledge-${{ github.run_id }}
           restore-keys: knowledge-
-      - name: Refresh fonts and licensed articles
+      - name: Refresh fonts and article links
         if: github.event_name != 'push'
         run: python scripts/sync.py
       - name: Validate generated site
@@ -44,16 +42,16 @@ jobs:
         run: |
           git config user.name "Open Shelf updates"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/catalog.js data/catalog.json data/knowledge.js articles sitemap.xml
+          git add -A -- data/catalog.js data/catalog.json data/knowledge.js knowledge-assets sitemap.xml
           if ! git diff --cached --quiet; then
-            git commit -m "Content: Refresh fonts and Knowledge articles"
+            git commit -m "Content: Refresh fonts and Knowledge links"
             git push
           fi
       - name: Prepare public files
         run: |
           mkdir _site
           cp index.html 404.html app.js styles.css knowledge.js local-fonts.js favicon.svg *.png robots.txt sitemap.xml site.webmanifest .nojekyll _site/
-          cp -R data articles _site/
+          cp -R data knowledge-assets _site/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

@@ -1,10 +1,7 @@
 import json
-from pathlib import Path
-import re
 import unittest
 from urllib.parse import unquote, urlsplit
-from bs4 import BeautifulSoup
-from sync import ROOT, catalog, fields, render_content
+from sync import ROOT, catalog, fields
 
 class ContentTests(unittest.TestCase):
     def test_catalog_only_open_source_and_removed_disappear(self):
@@ -15,31 +12,33 @@ class ContentTests(unittest.TestCase):
         self.assertNotIn('Inter',[f['n'] for f in result])
         self.assertEqual(result[0]['w'],[400,700])
         self.assertFalse(result[0]['noItal'])
+
     def test_incomplete_catalog_is_rejected(self):
         with self.assertRaises(ValueError):catalog({'familyMetadataList':[]},{},'commit')
+
     def test_protobuf_unicode_and_escaped_quotes(self):
         self.assertEqual(fields('authors: "Éva \\"Example\\""','authors'),['Éva "Example"'])
-    def test_sanitize_and_rewrite(self):
-        text='<script>alert(1)</script><img src="images/a.svg" onerror="alert(1)">\n\n[Term](/glossary/type) [Unsafe](javascript:alert(1))'
-        out=render_content(text,Path('lesson'),{'/glossary/type':'glossary-type'},{'lesson/images/a.svg'})
-        self.assertNotIn('<script',out);self.assertNotIn('onerror',out);self.assertNotIn('javascript:',out)
-        self.assertIn('../glossary-type/',out);self.assertIn('../media/lesson/images/a.svg',out)
-    def test_markdown_images_inside_figures(self):
-        out=render_content('<figure>\n\n![Caption](images/a.svg)\n\n<figcaption>Credit</figcaption>\n</figure>',Path('lesson'),{}, {'lesson/images/a.svg'})
-        self.assertIn('<img',out);self.assertIn('Credit',out);self.assertNotIn('![',out)
-    def test_no_missing_local_article_assets_or_pages(self):
-        pages=list((ROOT/'articles').glob('*/index.html'))
-        self.assertGreaterEqual(len(pages),200)
-        for p in pages:
-            soup=BeautifulSoup(p.read_text(),'html.parser')
-            self.assertIn('CC BY-SA 4.0',soup.get_text())
-            self.assertIsNotNone(soup.find('a',href=re.compile('github.com/google/fonts/blob/')))
-            self.assertIsNone(soup.find('script'))
-            for el in soup.select('[src], a[href], link[href]'):
-                v=el.get('src',el.get('href',''))
-                if not v or v.startswith('#') or urlsplit(v).scheme:continue
-                target=(p.parent/unquote(v.split('#')[0])).resolve()
-                self.assertTrue(target.exists(),str(p)+': '+v)
+
+    def test_knowledge_links_to_google_with_licensed_thumbnails(self):
+        raw=(ROOT/'data/knowledge.js').read_text()
+        articles=json.loads(raw.split(' = ',1)[1].removesuffix(';\n'))['articles']
+        self.assertGreaterEqual(len(articles),200)
+        self.assertEqual(len(articles),len({a['url'] for a in articles}))
+        for article in articles:
+            url=urlsplit(article['url'])
+            self.assertEqual(url.scheme,'https')
+            self.assertEqual(url.netloc,'fonts.google.com')
+            self.assertRegex(url.path,r'^/knowledge/(lesson|glossary)/[a-z0-9_]+$')
+            self.assertEqual(article['url'],article['original'])
+            self.assertTrue(article['authors'])
+            if article['image']:
+                self.assertTrue(article['image'].startswith('knowledge-assets/thumbnails/'))
+                self.assertTrue((ROOT/unquote(article['image'])).is_file(),article['image'])
+        self.assertTrue((ROOT/'knowledge-assets/LICENSE.txt').is_file())
+        self.assertTrue((ROOT/'knowledge-assets/SOURCE-NOTICE.md').is_file())
+        self.assertEqual(len(list((ROOT/'knowledge-assets/credits').rglob('*.textproto'))),len(articles))
+        self.assertFalse((ROOT/'articles').exists(),'Article bodies should remain at their original source')
+
     def test_unique_catalog_and_styles(self):
         data=json.loads((ROOT/'data/catalog.json').read_text());fonts=data['fonts']
         self.assertGreaterEqual(len(fonts),1900)

@@ -5,8 +5,8 @@ A public library of 1,950 open-source font families, a pairing workbench and a b
 - Preview text, weights and styles; search and filter the public catalog.
 - List view or automatic / one-to-six-column grids (adapted for small screens).
 - Pairing recommendations with linked design references, community discussions and clearly labelled award-inspired interpretations.
-- Import TTF, OTF, WOFF and WOFF2 files into a private Local Fonts library. Edit names, descriptions, designers, foundries, categories, uses, feelings, tags and licence notes. Files persist in IndexedDB on the same browser and origin. Backups include files and metadata; nothing is uploaded.
-- Google Fonts Knowledge: 85 lessons and 185 glossary entries, with original illustrations, captions, author/reviewer credits and source links.
+- Import TTF, OTF, WOFF and WOFF2 files into a private Local Fonts library. Edit names, descriptions, designers, foundries, categories, uses, feelings, tags and licence notes. Files persist in IndexedDB on the same browser and origin. Export collection saves all files and metadata in one JSON file. Import collection restores it in another browser or on another device; nothing is uploaded.
+- Google Fonts Knowledge: a searchable directory of 85 lessons and 185 glossary entries, linking directly to Google Fonts. Cards include credited excerpts and thumbnails.
 
 ## Run locally
 
@@ -14,21 +14,21 @@ Serve this folder over HTTP, for example `python3 -m http.server 8765`, and open
 
 ## Refresh content
 
-Install Python dependencies with `pip install -r scripts/requirements.txt`, then run `python scripts/sync.py`.
+Run `python3 scripts/sync.py` with Python 3.9 or newer. No third-party Python packages are required.
 
-The sync reads the current Google Fonts open-source metadata and pins the Google Fonts GitHub content to a single commit. It only reproduces the explicitly licensed `cc-by-sa/knowledge` subtree. Every downloaded file is checked against its Git blob hash. An upstream licence change, incomplete catalog, missing asset or large catalog drop fails the refresh. Staging keeps the existing site unchanged if fetching or rendering fails.
+The sync reads the current Google Fonts open-source metadata and pins the Google Fonts GitHub content to a single commit. It uses metadata and thumbnails from the explicitly licensed `cc-by-sa/knowledge` subtree to build an article directory. Full articles remain on Google Fonts. Every downloaded file is checked against its Git blob hash. An upstream licence change, incomplete catalog, missing asset or large catalog drop fails the refresh. Staging keeps the existing site unchanged if fetching or directory generation fails.
 
 Removed fonts disappear on the next successful refresh. Preview failures hide a family from search, recommendations and selectors for that visit; Retry loading clears that temporary state. A failed requested style is retried using the regular style before excluding the family. Fonts are not permanently marked unavailable because of a visitor's network problem.
 
-The `Publish Open Shelf` GitHub Actions workflow refreshes content weekly on Monday at 03:23 UTC and supports manual runs. It validates, commits the snapshot using `Content: Refresh fonts and Knowledge articles`, and deploys the resulting artifact to GitHub Pages. Normal pushes deploy the checked-in snapshot. In repository Settings → Pages, set Source to **GitHub Actions**. The workflow uses only the repository's built-in token, with separate build and deployment permissions. Failed refreshes leave the last deployment live and show a failed Actions run. GitHub can disable scheduled workflows after 60 days without repository activity; re-enable from Actions if necessary. No external service or paid subscription is required.
+The `Publish Open Shelf` GitHub Actions workflow refreshes content weekly on Monday at 03:23 UTC and supports manual runs. It validates, commits the snapshot using `Content: Refresh fonts and Knowledge links`, and deploys the resulting artifact to GitHub Pages. Normal pushes deploy the checked-in snapshot. In repository Settings → Pages, set Source to **GitHub Actions**. The workflow uses only the repository's built-in token, with separate build and deployment permissions. Failed refreshes leave the last deployment live and show a failed Actions run. GitHub can disable scheduled workflows after 60 days without repository activity; re-enable from Actions if necessary. No external service or paid subscription is required.
 
 ## Licensing and attribution
 
 Font software retains each project's own licence. The catalog links to its source; when a source folder cannot be resolved, it explicitly directs readers to the Google Fonts licence rather than guessing.
 
-Google Fonts Knowledge text and illustrations are licensed under **Creative Commons Attribution-ShareAlike 4.0 International**, as declared in https://github.com/google/fonts/tree/main/cc-by-sa. The licence is reproduced in `articles/LICENSE.txt`. Article pages retain authors, reviewers, captions, image credits and original source links. Original Markdown and metadata accompany each page. The contributor directory is at `articles/contributors.textproto`.
+Google Fonts Knowledge excerpts and thumbnails are licensed under **Creative Commons Attribution-ShareAlike 4.0 International**, as declared in https://github.com/google/fonts/tree/main/cc-by-sa. The licence is reproduced in `knowledge-assets/LICENSE.txt`. Each card names its authors and links to the original Google Fonts article. The directory links to the licence and GitHub source. Original attribution metadata, including reviewers, is preserved in `knowledge-assets/credits/`; the contributor directory is at `knowledge-assets/contributors.textproto`.
 
-Open Shelf's Knowledge layout, rendering and link adaptations are also made available under CC BY-SA 4.0. Adaptations are identified on every article. Original third-party credits and links are retained; external interactive material is linked, not copied. There is no Google endorsement or affiliation. Pairing notes outside the Knowledge articles are original editorial comments with references; they do not reproduce external articles or screenshots. Award-inspired pairings are suggestions, not assertions of the exact typefaces used by the award winner.
+Thumbnails are scaled for display; original asset files and excerpts are unchanged. Open Shelf's Knowledge directory layout and adaptations are also available under CC BY-SA 4.0. Article bodies are not copied. There is no Google endorsement or affiliation. Pairing notes are original editorial comments with references; they do not reproduce external articles or screenshots. Award-inspired pairings are suggestions, not assertions of the exact typefaces used by the award winner.
 
 ## Checks
 
@@ -40,4 +40,4 @@ node --check local-fonts.js
 node --check knowledge.js
 ```
 
-The checks cover content sanitization, Markdown figures, local article links/assets, catalog membership and font-load failure handling. Browser checks cover search, grid selection, pairing controls, imported file validation, metadata persistence and article rendering.
+The checks cover external article destinations, thumbnail availability and attribution files, catalog membership and font-load failure handling. Browser checks cover search, grid selection, pairing controls, imported file validation, metadata persistence and collection export/import.

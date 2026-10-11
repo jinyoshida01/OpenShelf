@@ -1118,7 +1118,7 @@ function renderPairings() {
   const advOpen = store.get('advOpen', false);
   $('#view-pairings').innerHTML = `
     <header class="page-head"><h1>Pairings</h1>
-      <p>A heading face and a body face. Build your own, let the randomiser suggest one, or start from our editorial picks and source-linked references. Your text in the bar above becomes the headline.</p></header>
+      <p><span class="copy-line">A heading face and a body face. Build your own, let the randomiser suggest one, or start from our editorial picks and source-linked references.</span> <span class="copy-line">Your text in the bar above becomes the headline.</span></p></header>
     <section class="panel builder" aria-label="Pairing builder">
       <div class="bcontrols">
         <div class="bfield"><label for="ph">Heading</label><div class="bfield-row"><select id="ph" class="sel">${fontOptions(state.pair.h)}</select><button class="ib lock" data-action="lock" data-which="h" aria-label="Lock heading font when randomising" aria-pressed="false"></button></div></div>
@@ -1203,7 +1203,8 @@ function renderAbout() {
       <p>A browsable library of free, open-source typefaces, with tools for comparing, pairing and organising them.</p></header>
     <div class="about-body">
       <h2 class="sec">What this is</h2>
-      <p class="about-lede">Open Shelf collects ${F.length} open-source typefaces from ${designers} designers and foundries, so you can try them with your own words, find pairs that work, and keep shortlists for your projects.</p>
+      <p class="about-lede">I created Open Shelf as an all-in-one tool for open-source typefaces, so you can find, preview and pair fonts without having to go through several websites.</p>
+      <p>Open Shelf collects ${F.length} open-source typefaces from ${designers} designers and foundries, so you can try them with your own words, find pairs that work, and keep shortlists for your projects.</p>
       <p>Every font here can be downloaded for free and used in personal and commercial work, including websites, apps, print, logos and video. Each font page links to Google Fonts, Fontsource and, where available, the designer\u2019s own source files.</p>
       <p>Open Shelf doesn\u2019t host or sell fonts. Previews load straight from Google Fonts, and downloads come from those original sources.</p>
 
@@ -1238,7 +1239,7 @@ function renderAbout() {
       <h2 class="sec">About the information</h2>
       <p>Font membership, designers, styles and dates are refreshed weekly from Google Fonts. Dates for newly added records refer to their addition to the Google Fonts catalog, not necessarily their original release. Removed families disappear on the next successful refresh, and failed previews are hidden for the current visit with an option to retry. Classifications, feelings and use cases are editorial judgements meant to help you browse, not official categories. Pairing notes draw on widely shared typographic advice. If something looks wrong, check the font\u2019s Google Fonts page or source repository, which are the authority.</p>
 
-      <h2 class="sec">Local Fonts and Knowledge</h2><p>Local font files and their editable descriptions, categories and notes are stored in this browser using IndexedDB. They are not uploaded. Export a backup before clearing browser data. Your own font licences apply to imported files.</p><p>The Knowledge library reproduces the explicitly CC BY-SA 4.0 section of Google Fonts’ public repository, with source links, author and reviewer credits, original illustrations and captions. Our layout and link adaptations are shared under the same licence. Weekly refreshes regenerate pages from the source content; failed updates preserve the previous snapshot. GitHub may pause scheduled workflows after 60 days of repository inactivity; they can be re-enabled from Actions.</p>
+      <h2 class="sec">Local Fonts and Knowledge</h2><p>Local font files and their editable descriptions, categories and notes are stored in this browser using IndexedDB. They are not uploaded. Use Export collection to save your font files and their details before clearing browser data. Import collection restores that file in another browser or on another device. Your own font licences apply to imported files.</p><p>The Knowledge library is a searchable directory of Google Fonts Knowledge articles. Each card links to the original article on Google Fonts. Excerpts and thumbnails retain author credits and are shared under <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>, with <a href="https://github.com/google/fonts/tree/main/cc-by-sa/knowledge">source material on GitHub</a>. Weekly refreshes update the directory; failed updates preserve the previous snapshot. GitHub may pause scheduled workflows after 60 days of repository inactivity; they can be re-enabled from Actions.</p>
       <h2 class="sec">Privacy</h2>
       <p>Your preview text, settings and collections are stored only in this browser. There are no accounts. Font previews are loaded from Google Fonts, so your browser contacts Google\u2019s servers to fetch them, as it would on any site that uses Google Fonts.</p>
 
@@ -1370,7 +1371,8 @@ $('#theme-btn').addEventListener('click', () => { const r = document.documentEle
 /* ---------- boot ---------- */
 setupProof();
 renderMadeBy();
-$('#last-updated').textContent = `Website updated 12 October 2026 · Font catalog checked ${catalog.updatedAt} · Knowledge synced ${window.OPEN_SHELF_KNOWLEDGE.updatedAt}`;
+$('#last-updated').classList.add('meta-row');
+$('#last-updated').innerHTML = `<span>Website updated <time datetime="2026-10-12">12 October 2026</time></span><span>Font catalog checked <time datetime="${esc(catalog.updatedAt)}">${esc(catalog.updatedAt)}</time></span><span>Knowledge synced <time datetime="${esc(window.OPEN_SHELF_KNOWLEDGE.updatedAt)}">${esc(window.OPEN_SHELF_KNOWLEDGE.updatedAt)}</time></span>`;
 buildPanel();
 (function setupFPanel() {
   const r = $('#fp-resize');
