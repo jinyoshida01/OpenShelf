@@ -1,0 +1,91 @@
+name: Publish desktop preview
+on:
+  workflow_dispatch:
+    inputs:
+      build_run:
+        description: Successful Build desktop apps run ID from main
+        required: true
+        default: '38204319820'
+      tag:
+        description: New preview release tag
+        required: true
+        default: 'desktop-v0.1.0-preview.1'
+permissions:
+  actions: read
+  contents: write
+concurrency:
+  group: desktop-preview-release
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify the source build
+        id: build
+        uses: actions/github-script@v7
+        env:
+          BUILD_RUN: ${{ inputs.build_run }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        with:
+          script: |
+            if (!/^\d+$/.test(process.env.BUILD_RUN)) throw new Error('Invalid build run ID');
+            if (!/^desktop-v\d+\.\d+\.\d+-preview\.\d+$/.test(process.env.RELEASE_TAG)) throw new Error('Use a preview release tag');
+            const {data: run} = await github.rest.actions.getWorkflowRun({...context.repo, run_id: Number(process.env.BUILD_RUN)});
+            if (run.path !== '.github/workflows/desktop.yml' || run.head_branch !== 'main' || run.event !== 'push' || run.conclusion !== 'success' || run.head_repository.full_name !== `${context.repo.owner}/${context.repo.repo}`) {
+              throw new Error('Select a successful main-branch desktop build from this repository');
+            }
+            core.setOutput('sha', run.head_sha);
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ inputs.build_run }}
+          pattern: OpenShelf-*-preview
+          path: installers
+      - name: Publish installers and checksums
+        uses: actions/github-script@v7
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+          BUILD_SHA: ${{ steps.build.outputs.sha }}
+          BUILD_RUN: ${{ inputs.build_run }}
+        with:
+          script: |
+            const fs = require('node:fs');
+            const path = require('node:path');
+            const crypto = require('node:crypto');
+            function walk(dir) {
+              return fs.readdirSync(dir, {withFileTypes: true}).flatMap(e => e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)]);
+            }
+            const files = walk('installers').filter(p => /\.(dmg|exe)$/.test(p));
+            if (files.filter(p => p.endsWith('.dmg')).length !== 1 || files.filter(p => p.endsWith('.exe')).length !== 1) throw new Error('Expected one macOS DMG and one Windows installer');
+            const assets = files.map(p => ({name: path.basename(p), data: fs.readFileSync(p)}));
+            assets.push({name: 'SHA256SUMS.txt', data: Buffer.from(assets.map(a => `${crypto.createHash('sha256').update(a.data).digest('hex')}  ${a.name}`).join('\n') + '\n')});
+            const body = [
+              'First public preview of OpenShelf for macOS and Windows.',
+              '',
+              '## Downloads',
+              '- **macOS:** download the `.dmg` asset. The architecture is included in its filename (`aarch64` means Apple silicon).',
+              '- **Windows:** download the `.exe` installer (x64).',
+              '- `SHA256SUMS.txt` contains checksums for both installers. Source-code archives are not installers.',
+              '',
+              '## Included',
+              '- Browse 2,065 open-source font families, curated pairings and typography articles.',
+              '- Download fonts inside the app, import your own fonts and browse offline.',
+              '- Enable individual fonts or whole collections, filter enabled fonts and use the automatic Enabled collection.',
+              '- Choose the download location, organise collections and customise font previews.',
+              '- Latest folder animation, layout and accessibility refinements.',
+              '',
+              '## Preview limitations',
+              '- These installers are not distribution-signed; the macOS build is not notarized. Your operating system may warn about or block installation.',
+              '- Automatic in-app updates are not configured in this preview. Download future installers from GitHub Releases.',
+              '- The macOS app has been checked locally. Both platforms passed automated build checks; Windows still needs runtime testing on a Windows machine.',
+              '- Enabled fonts are available to other applications while OpenShelf is running. Imported fonts retain their own licensing requirements.',
+              '',
+              `Built from commit ${process.env.BUILD_SHA} in [GitHub Actions](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${process.env.BUILD_RUN}).`
+            ].join('\n');
+            const {data: release} = await github.rest.repos.createRelease({...context.repo, tag_name: process.env.RELEASE_TAG, target_commitish: process.env.BUILD_SHA, name: 'OpenShelf 0.1.0 — Preview 1', body, draft: true, prerelease: true});
+            for (const asset of assets) {
+              await github.rest.repos.uploadReleaseAsset({...context.repo, release_id: release.id, name: asset.name, data: asset.data});
+              core.info(`Uploaded ${asset.name}`);
+            }
+            const {data: published} = await github.rest.repos.updateRelease({...context.repo, release_id: release.id, draft: false, prerelease: true});
+            await core.summary.addLink('Download the OpenShelf preview', published.html_url).write();

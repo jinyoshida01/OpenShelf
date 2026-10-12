@@ -51,7 +51,7 @@ The checks cover external article destinations, thumbnail availability and attri
 
 ## Desktop preview: macOS and Windows
 
-The website stays on GitHub Pages. The Tauri application bundles the same interface and catalog, using the system web engine instead of shipping a separate browser. GitHub Releases hosts installers, signed update packages and `latest.json`; GitHub Pages alone cannot activate system fonts or install application updates.
+The website stays on GitHub Pages. The Tauri application bundles the same interface and catalog, using the system web engine instead of shipping a separate browser. [Download the desktop preview from GitHub Releases](https://github.com/jinyoshida01/OpenShelf/releases). Preview installers are unsigned, the macOS preview is not notarized, and automatic updates are not configured yet. GitHub Pages alone cannot activate system fonts or install application updates. Signed update packages and `latest.json` will be supplied once release signing is configured.
 
 - Download original TTF/OTF families inside the app, including their licence notices. The current desktop index contains 2,053 downloadable families. Families without suitable files have no download button.
 - Enable or disable downloaded families and saved collections. A font remains enabled while any enabled collection or individual toggle needs it. Fonts are available to other applications while OpenShelf is running, are unregistered on normal exit, and restore on next launch. Existing applications may need to reopen their font picker.
@@ -71,7 +71,7 @@ For development, run `npm run desktop:prepare` then `npm run desktop:dev`. To re
 
 ### Signed releases and in-app updates
 
-The local preview is not connected to releases. The Check for updates button explains this until a release public key is included in a build. No release has been published by adding these files.
+Public preview installers are published through **Publish desktop preview**, using artifacts from a successful main-branch desktop build. It verifies the source build, attaches both installers and SHA-256 checksums, and publishes a prerelease only after uploads finish. Preview installers do not support automatic updates; the Check for updates button explains this until a release public key is included in a build.
 
 1. Generate a Tauri updater signing key following the [official updater instructions](https://v2.tauri.app/plugin/updater/). Keep the private key outside the repository. Configure `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` as GitHub environment secrets, and `OPEN_SHELF_UPDATER_PUBLIC_KEY` as an environment variable in `desktop-release`.
 2. Configure the Apple Developer ID certificate, password, signing identity and notarization credentials using the `APPLE_*` secrets named in the release workflow. Public macOS distribution needs signing and notarization. The local preview is not notarized.
