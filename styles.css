@@ -537,7 +537,6 @@ html:not(.desktop-app) .results.grid .font-device-controls{width:auto;margin-lef
 .collections-workspace .ci::before{content:'';position:absolute;top:0;left:20px;width:58px;height:5px;border-radius:0 0 5px 5px;background:var(--marker,var(--muted))}
 .collections-workspace .collection-label-button{width:44px;height:40px;border:1px solid var(--line2);border-radius:5px 10px 10px 10px;background:var(--raise);color:var(--marker,var(--text))}
 .collections-workspace .ci-head{flex-wrap:wrap;gap:6px 12px}.collections-workspace .ci-name{flex:1;min-width:80px}.collections-workspace .ci-count{color:var(--muted)}
-.collections-workspace .ci .collection-items{grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr))}
 .collections-workspace .ci .ci-row{background:var(--raise)}
 .local-layout-options{display:flex;align-items:center;justify-content:flex-end;gap:14px;margin-left:auto}.local-layout-options .local-layout{margin:0}.local-columns[hidden]{display:none}
 .local-grid[data-layout=grid]{grid-template-columns:repeat(var(--local-cols,2),minmax(0,1fr))}.local-grid[data-layout=grid][style*="--local-cols:auto"]{grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr))}.local-card{min-width:0}.local-card .actions{flex-wrap:wrap}.local-card .font-head h2{overflow-wrap:anywhere}
