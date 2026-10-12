@@ -514,7 +514,7 @@ const state = {
   rand: Object.assign({}, DEFAULT_RAND, store.get('rand', {})),
   cols: store.get('cols', null), collectionText: String(store.get('collectionText', '')).slice(0,500),
   weight: store.get('gw', 0), ital: store.get('gi', false), card:savedUI.card||{}, exactW:!!savedUI.exactW,
-  open: new Set(store.get('openCollections',[])), renaming:null, importOpen:false, shuffle:{}
+  open: new Set(store.get('openCollections',[]).filter(id=>id!==ENABLED_ID)), renaming:null, importOpen:false, shuffle:{}
 };
 function cleanCollectionPreview(p) {
   return {mode:['name','page','custom'].includes(p?.mode) ? p.mode : 'name',text:String(p?.text || '').slice(0,500)};
@@ -535,7 +535,7 @@ function normaliseCols() {
 normaliseCols();
 if(state.col!==ENABLED_ID&&state.col&&!state.cols.some(c=>c.id===state.col))state.col=null;
 for(const [key,values] of Object.entries(savedUI.filters||{}))if(state.f[key]&&Array.isArray(values))state.f[key]=new Set(values);
-function persistUI(){store.set('uiPreferences',{enabledOnly:state.enabledOnly,sort:state.sort,q:state.q,col:state.col,prov:state.prov,mood:state.mood,card:state.card,exactW:state.exactW,filters:Object.fromEntries(Object.entries(state.f).map(([k,v])=>[k,[...v]]))});store.set('openCollections',[...state.open]);store.set('collectionProofOpen',state.collectionProofOpen);}
+function persistUI(){store.set('uiPreferences',{enabledOnly:state.enabledOnly,sort:state.sort,q:state.q,col:state.col,prov:state.prov,mood:state.mood,card:state.card,exactW:state.exactW,filters:Object.fromEntries(Object.entries(state.f).map(([k,v])=>[k,[...v]]))});store.set('openCollections',[...state.open].filter(id=>id!==ENABLED_ID));store.set('collectionProofOpen',state.collectionProofOpen);}
 window.addEventListener('pagehide',persistUI);document.addEventListener('visibilitychange',()=>{if(document.hidden)persistUI();});
 let preferenceTimer;for(const event of ['click','input','change'])document.addEventListener(event,()=>{clearTimeout(preferenceTimer);preferenceTimer=setTimeout(persistUI,250);});
 state.collectionLayout=state.collectionLayout==='grid'?'grid':'list';
