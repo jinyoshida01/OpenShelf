@@ -7,7 +7,7 @@ const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const range = (a, b) => { const o = []; for (let w = a; w <= b; w += 100) o.push(w); return o; };
 const GH = 'https://github.com/';
-const SOURCES = {google:'Google Fonts',fontsource:'Fontsource',local:'Manually added'};
+const SOURCES = {google:'Google Fonts',fontsource:'Fontsource',local:'External imports'};
 const OFL = 'SIL Open Font License 1.1';
 
 /* ---------- vocabularies ---------- */
@@ -424,12 +424,12 @@ const autoBlurb = f => {
   const uses = f.u.slice(0, 2).map(u => USES[u].toLowerCase());
   return `${art} ${k} typeface${by}${pub}.${uses.length ? ` Suited to ${uses.join(' and ')}.` : ''}`;
 };
-F.forEach(f => { if (!f.b) f.b = autoBlurb(f); f.hay = [f.n, f.d, f.p, f.b, ...(f.subsets || []), ...(f.labels?.keywords || []),f.tags||'',f.manual?'manually added licence unverified local':'', CLS[f.c], kindLabel(f), ...f.s.map(x => SUBS[x]), ...f.a.map(x => APPEAR[x] || x), ...f.u.map(x => USES[x]), ...f.t.map(x => THEMES[x])].join(' ').toLowerCase(); });
+F.forEach(f => { if (!f.b) f.b = autoBlurb(f); f.hay = [f.n, f.d, f.p, f.b, ...(f.subsets || []), ...(f.labels?.keywords || []),f.tags||'',f.manual?'external imported manually added licence unverified local':'', CLS[f.c], kindLabel(f), ...f.s.map(x => SUBS[x]), ...f.a.map(x => APPEAR[x] || x), ...f.u.map(x => USES[x]), ...f.t.map(x => THEMES[x])].join(' ').toLowerCase(); });
 function syncLocalRegistry(){
  const records=desktop.enabled?desktop.localFonts():window.OpenShelfLocal.records();
  F.filter(f=>f.manual).forEach(f=>{delete BY[f.slug];});
  for(let i=F.length-1;i>=0;i--)if(F[i].manual)F.splice(i,1);
- records.map(localFont).forEach(f=>{f.hay=[f.n,f.d,f.b,f.tags,CLS[f.c],'manually added licence unverified local'].join(' ').toLowerCase();F.push(f);BY[f.slug]=f;});
+ records.map(localFont).forEach(f=>{f.hay=[f.n,f.d,f.b,f.tags,CLS[f.c],'external imported manually added licence unverified local'].join(' ').toLowerCase();F.push(f);BY[f.slug]=f;});
  normaliseCols();saveCols();
 }
 const filterLabel = (set, k) => set === 'source' ? SOURCES[k] : set === 'feel' ? THEMES[k] : set === 'use' ? USES[k] : set === 'app' ? APPEAR[k] : set === 'tech' ? (k === 'color' ? 'Colour font' : 'Variable') : SUBS[k];
@@ -517,7 +517,7 @@ function cleanCollectionPreview(p) {
   return {mode:['name','page','custom'].includes(p?.mode) ? p.mode : 'name',text:String(p?.text || '').slice(0,500)};
 }
 const COL_COLORS={none:'No colour',red:'Red',orange:'Orange',gold:'Gold',green:'Green',blue:'Blue',purple:'Purple',pink:'Pink'};
-const COL_ICONS={none:'No icon',star:'★',heart:'♥',book:'▤',folder:'▱',circle:'●',diamond:'◆',flag:'⚑'};
+const COL_ICONS={none:'No icon',star:'★',heart:'♥',book:'▤',folder:'<svg class="i folder-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5h7l2 2h9v13H3z"/></svg>' ,circle:'●',diamond:'◆',flag:'⚑'};
 const cleanMarker=m=>({color:Object.hasOwn(COL_COLORS,m?.color)?m.color:'none',icon:Object.hasOwn(COL_ICONS,m?.icon)?m.icon:'none'});
 function normaliseCols() {
   if (!Array.isArray(state.cols)) state.cols = [];
@@ -773,7 +773,7 @@ function fontCard(f) {
   el.innerHTML = `
     <div class="font-head">
       <a class="font-name" href="#/font/${f.slug}">${esc(f.n)}</a>
-      ${f.manual?'<span class="manual-badge">Manually added · licence unverified</span>':''}<span class="meta m1">${esc(f.d)}</span><span class="meta">${kindLabel(f)}</span><span class="meta">${styles(f)}</span>${f.y ? `<span class="meta">${f.y}</span>` : ''}${state.weight && !(state.card[f.slug] && state.card[f.slug].w) && libW(f) !== state.weight ? `<span class="meta" title="${esc(f.n)} doesn't come in ${state.weight}">Shown at ${libW(f)}</span>` : ''}<span class="meta" data-noital="${f.slug}" ${f.noItal && libI(f) ? '' : 'hidden'}>No true italic</span>
+      ${f.manual?'<span class="manual-badge">External import · licence unverified</span>':''}<span class="meta m1">${esc(f.d)}</span><span class="meta">${kindLabel(f)}</span><span class="meta">${styles(f)}</span>${f.y ? `<span class="meta">${f.y}</span>` : ''}${state.weight && !(state.card[f.slug] && state.card[f.slug].w) && libW(f) !== state.weight ? `<span class="meta" title="${esc(f.n)} doesn't come in ${state.weight}">Shown at ${libW(f)}</span>` : ''}<span class="meta" data-noital="${f.slug}" ${f.noItal && libI(f) ? '' : 'hidden'}>No true italic</span>
       <div class="font-acts"><div class="font-style-controls">
         <select class="mini" data-card="w" data-slug="${f.slug}" aria-label="Weight for ${esc(f.n)}" ${f.w.length === 1 ? 'disabled' : ''}>${f.w.map(w => `<option value="${w}" ${w === libW(f) ? 'selected' : ''}>${w} ${WNAME[w] || ""}</option>`).join('')}</select>
         <button class="ib ibt" data-action="cardi" data-slug="${f.slug}" aria-pressed="${libI(f)}" aria-label="Italic for ${esc(f.n)}" title="Italic"><i>I</i></button></div><div class="font-save-controls">
@@ -1054,7 +1054,7 @@ function collectionContent(scope) {
         <textarea id="${scope}-import-text" data-collection-import placeholder='{"collections":[{"name":"Brand refresh","fonts":["Inter"],"pairs":[{"heading":"Fraunces","body":"Inter"}]}]}' aria-label="Paste collection JSON"></textarea>
         <div class="row"><button class="btn sm primary" data-action="import-paste">Import pasted JSON</button><button class="btn sm" data-action="import-file">Choose file</button><button class="btn sm quiet" data-action="import-toggle">Cancel</button></div>
       </div>` : ''}
-      <div class="dr-list">${state.cols.map(drawerItem).join('')}</div>`;
+      <div class="dr-list" data-folder-layout="${state.collectionLayout}" style="--folder-cols:${state.collectionCols}">${state.cols.map(drawerItem).join('')}</div>`;
 }
 function renderCollectionsPage() {
   $('#view-collections').innerHTML = `<header class="page-head"><h1>Collections</h1><p><span class="copy-line">Organise saved fonts and pairings for your projects.</span> <span class="copy-line">These are the same collections as the side panel, saved in this browser.</span></p></header><div class="collections-heading"><p class="count">${plural(state.cols.length, 'collection')} · ${plural(state.cols.reduce((n,c)=>n+c.fonts.length+c.pairs.length,0), 'saved item')}</p></div><div class="collection-manager collections-workspace">${collectionContent('page')}</div>`;
@@ -1092,11 +1092,11 @@ function renderDrawer() {
 function drawerItem(c) {
   const open = state.open.has(c.id);
   return `<section class="ci" data-col-card="${c.id}" data-collection-layout="${state.collectionLayout}" data-marker-color="${c.marker.color}" style="--collection-cols:${state.collectionCols==='auto'?'auto':state.collectionCols}">
-    <div class="ci-heading"><button class="collection-label-button" data-action="marker-open" data-id="${c.id}" aria-label="Label ${esc(c.name)}" aria-expanded="${state.markerMenu===c.id}" title="Change colour and icon"><span class="collection-label-icon" aria-hidden="true">${c.marker.icon==='none'?COL_ICONS.folder:COL_ICONS[c.marker.icon]}</span><span class="collection-label-dot" aria-hidden="true"></span></button><button class="ci-head" data-action="ci-toggle" data-id="${c.id}" aria-expanded="${open}"><span class="ci-name">${esc(c.name)}</span><span class="ci-count">${colSummary(c)}</span>${ICON.chev}</button></div>
+    <div class="ci-heading"><button class="collection-label-button" data-action="marker-open" data-id="${c.id}" aria-label="Label ${esc(c.name)}" aria-expanded="${state.markerMenu===c.id}" title="Change colour and icon"><span class="collection-label-icon" aria-hidden="true">${COL_ICONS.folder}${!['none','folder'].includes(c.marker.icon)?`<span class="folder-symbol">${COL_ICONS[c.marker.icon]}</span>`:''}</span><span class="collection-label-dot" aria-hidden="true"></span></button><button class="ci-head" data-action="ci-toggle" data-id="${c.id}" aria-expanded="${open}"><span class="ci-name">${esc(c.name)}</span><span class="ci-count">${colSummary(c)}</span>${ICON.chev}</button></div>
     ${state.markerMenu===c.id?markerPicker(c):''}${desktop.collectionButtons(c)}
     ${open ? `<div class="ci-body">${collectionPreviewControls(c)}
       ${state.renaming === c.id ? `<form class="inline-new" data-form="rename" data-id="${c.id}"><input type="text" value="${esc(c.name)}" aria-label="Collection name" maxlength="60"><button class="btn sm primary" type="submit">Save</button></form>` : ''}
-      ${c.fonts.length ? `<p class="ci-sub">Fonts</p><div class="collection-items">${c.fonts.map(s => { const f = BY[s]; return `<div class="ci-row"><a class="collection-font-link" href="#/font/${s}"><span class="collection-font-label" data-preview-label="${c.id}">${esc(f.n)}</span>${f.manual?'<span class="manual-badge">Manually added · licence unverified</span>':''}<span class="collection-specimen" data-col-preview data-col="${c.id}" data-font="${s}" style="font-family:${fam(f)};font-weight:${pvWeight(f)}">${esc(collectionPreviewText(c,f))}</span></a><div class="collection-font-device" data-device-font="${esc(f.slug)}" data-device-name="${esc(f.n)}">${desktop.enabled?desktop.buttons(f,true):!f.manual?`<a class="ib download-button" href="${f.gf}" target="_blank" rel="noopener" aria-label="Download ${esc(f.n)}" title="Download ${esc(f.n)}">${ICON.get}</a>`:''}</div><button class="ib" data-action="ci-rmfont" data-id="${c.id}" data-slug="${s}" aria-label="Remove ${esc(f.n)}" title="Remove">${ICON.x}</button></div>`; }).join('')}</div>` : ''}
+      ${c.fonts.length ? `<p class="ci-sub">Fonts</p><div class="collection-items">${c.fonts.map(s => { const f = BY[s]; return `<div class="ci-row"><a class="collection-font-link" href="#/font/${s}"><span class="collection-font-label" data-preview-label="${c.id}">${esc(f.n)}</span>${f.manual?'<span class="manual-badge">External import · licence unverified</span>':''}<span class="collection-specimen" data-col-preview data-col="${c.id}" data-font="${s}" style="font-family:${fam(f)};font-weight:${pvWeight(f)}">${esc(collectionPreviewText(c,f))}</span></a><div class="collection-font-device" data-device-font="${esc(f.slug)}" data-device-name="${esc(f.n)}">${desktop.enabled?desktop.buttons(f,true):!f.manual?`<a class="ib download-button" href="${f.gf}" target="_blank" rel="noopener" aria-label="Download ${esc(f.n)}" title="Download ${esc(f.n)}">${ICON.get}</a>`:''}</div><button class="ib" data-action="ci-rmfont" data-id="${c.id}" data-slug="${s}" aria-label="Remove ${esc(f.n)}" title="Remove">${ICON.x}</button></div>`; }).join('')}</div>` : ''}
       ${c.pairs.length ? `<p class="ci-sub">Pairings</p><div class="collection-items">${c.pairs.map((p, pi) => { const h = BY[p.h], b = BY[p.b]; return `<div class="ci-row"><button class="ci-pair" data-action="openpair" data-col="${c.id}" data-idx="${pi}" data-h="${p.h}" data-b="${p.b}" title="Open in the pairing builder"><span class="collection-font-label" data-preview-label="${c.id}">${esc(h.n)} + ${esc(b.n)}</span>${h.manual||b.manual?'<span class="manual-badge">Includes manually added fonts · verify licences</span>':''}<span class="h collection-specimen" data-col-preview data-col="${c.id}" data-font="${h.slug}" style="font-family:${fam(h)};font-weight:${pairHW(p)}">${esc(collectionPreviewText(c,h))}</span><span class="b collection-specimen" data-col-preview data-col="${c.id}" data-font="${b.slug}" style="font-family:${fam(b)}">${esc(collectionPreviewText(c,b))}</span></button><button class="ib" data-action="ci-rmpair" data-id="${c.id}" data-h="${p.h}" data-b="${p.b}" aria-label="Remove ${esc(h.n)} and ${esc(b.n)} pairing" title="Remove">${ICON.x}</button></div>`; }).join('')}</div>` : ''}
       ${!c.fonts.length && !c.pairs.length ? `<p class="ci-empty">${c.fixed ? 'Tap the heart on a font, or save a pairing here.' : 'Use the save button on any font or pairing to add it here.'}</p>` : ''}
       <div class="ci-acts">
@@ -1158,7 +1158,7 @@ function renderFont(f) {
           ${f.y ? `<dt>Added to catalog</dt><dd>${f.y}</dd>` : ''}
           <dt>Classification</dt><dd>${kindLabel(f)}</dd>
           <dt>Styles</dt><dd>${f.v ? 'Variable, weights ' + f.w[0] + ' to ' + f.w[f.w.length - 1] : f.w.map(w => WNAME[w]).join(', ')}</dd>
-          <dt>Licence</dt><dd>${f.manual?'<span class="manual-badge">Manually added · licence unverified</span> Verify usage rights yourself. This font may not be open-source.':''}<a ${f.manual?'hidden':''} href="${f.licenseUrl || (/Apache/.test(f.lic) && !/OFL/.test(f.lic) ? 'https://www.apache.org/licenses/LICENSE-2.0' : /Ubuntu/.test(f.lic) ? 'https://ubuntu.com/legal/font-licence' : 'https://openfontlicense.org')}" target="_blank" rel="noopener">${esc(f.lic)}</a></dd>
+          <dt>Licence</dt><dd>${f.manual?'<span class="manual-badge">External import · licence unverified</span> Verify usage rights yourself. This font may not be open-source.':''}<a ${f.manual?'hidden':''} href="${f.licenseUrl || (/Apache/.test(f.lic) && !/OFL/.test(f.lic) ? 'https://www.apache.org/licenses/LICENSE-2.0' : /Ubuntu/.test(f.lic) ? 'https://ubuntu.com/legal/font-licence' : 'https://openfontlicense.org')}" target="_blank" rel="noopener">${esc(f.lic)}</a></dd>
           ${!f.manual?`<dt>Install</dt><dd><code>npm i @fontsource/${f.fontsourceId || f.slug}</code></dd>`:''}
         </dl>
         <div class="tagrow"><b>Good for</b><div class="tags">${f.u.map(u => `<button class="btn sm" data-action="filterto" data-group="use" data-val="${u}">${USES[u]}</button>`).join('')}</div></div>

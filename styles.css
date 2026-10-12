@@ -528,3 +528,23 @@ html:not(.desktop-app) .results.grid .font-device-controls{width:auto;margin-lef
 @container(max-width:440px){.font .font-acts{display:grid!important;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'style device' 'style save';width:100%;align-items:start;gap:6px 10px}.font .font-style-controls{grid-area:style;align-self:start;justify-self:start}.font .font-device-controls{grid-area:device;width:auto!important;justify-self:end;gap:7px}.font .font-save-controls{grid-area:save;justify-self:end;margin:0}.font .font-device-controls .font-state-label{display:none}}
 .font{container-type:inline-size}
 @media(max-width:700px){.drawer-resize{display:none}.drawer{width:100vw}.font-acts{width:100%;margin-left:0!important}.font-style-controls{margin-right:auto}}
+
+/* Collection folders remain distinct in both themes, including when collapsed. */
+.collections-workspace .dr-list{display:grid;gap:22px;align-items:start}
+.collections-workspace .dr-list[data-folder-layout=grid]{grid-template-columns:repeat(var(--folder-cols,2),minmax(0,1fr))}
+.collections-workspace .dr-list[data-folder-layout=grid][style*="--folder-cols:auto"]{grid-template-columns:repeat(auto-fit,minmax(min(310px,100%),1fr))}
+.collections-workspace .ci{position:relative;border:1px solid var(--line2);background:var(--raise2);box-shadow:0 3px 12px #0001;padding:16px 20px 8px;border-radius:5px 18px 18px 18px}
+.collections-workspace .ci::before{content:'';position:absolute;top:0;left:20px;width:58px;height:5px;border-radius:0 0 5px 5px;background:var(--marker,var(--muted))}
+.collections-workspace .collection-label-button{width:44px;height:40px;border:1px solid var(--line2);border-radius:5px 10px 10px 10px;background:var(--raise);color:var(--marker,var(--text))}
+.collections-workspace .ci-head{flex-wrap:wrap;gap:6px 12px}.collections-workspace .ci-name{flex:1;min-width:80px}.collections-workspace .ci-count{color:var(--muted)}
+.collections-workspace .ci .collection-items{grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr))}
+.collections-workspace .ci .ci-row{background:var(--raise)}
+.local-layout-options{display:flex;align-items:center;justify-content:flex-end;gap:14px;margin-left:auto}.local-layout-options .local-layout{margin:0}.local-columns[hidden]{display:none}
+.local-grid[data-layout=grid]{grid-template-columns:repeat(var(--local-cols,2),minmax(0,1fr))}.local-grid[data-layout=grid][style*="--local-cols:auto"]{grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr))}.local-card{min-width:0}.local-card .actions{flex-wrap:wrap}.local-card .font-head h2{overflow-wrap:anywhere}
+.manual-badge{background:var(--raise2);color:var(--text)}
+/* Use a complete controls row before the metadata and buttons begin to wrap. */
+@container(max-width:1100px){.font .font-acts{display:grid!important;flex:0 0 100%;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'style device' 'style save';width:100%;margin:12px 0 0!important;align-items:start;gap:6px 12px;opacity:1}.font .font-style-controls{grid-area:style;justify-self:start;align-self:start;margin:0;min-width:0}.font .font-device-controls{grid-area:device;justify-self:end;width:auto!important;flex-wrap:nowrap;gap:7px}.font .font-save-controls{grid-area:save;justify-self:end;margin:0!important}.font .font-device-controls .font-statuses{margin:0}}
+@container(max-width:480px){.font .font-device-controls .font-state-label,.font .font-device-controls .activation-label{display:none}.font .font-style-controls .mini{max-width:145px}}
+@media(max-width:900px){.collections-workspace .dr-list[data-folder-layout=grid]{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.local-grid[data-layout=grid]{grid-template-columns:1fr}.local-view-tools{flex-wrap:wrap}.collections-workspace .dr-list[data-folder-layout=grid]{grid-template-columns:1fr}}
+.collection-label-icon{position:relative;display:grid;place-items:center}.collection-label-icon .folder-icon{width:27px;height:27px}.folder-symbol{position:absolute;top:9px;left:10px;font:10px/1 system-ui;color:var(--marker,var(--text))}
