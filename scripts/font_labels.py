@@ -1,4 +1,4 @@
-"""Conservative mappings of scored Google Fonts tags to Open Shelf filters."""
+"""Conservative mappings of scored Google Fonts tags to OpenShelf filters."""
 import csv, io
 FEEL={'Business':'corporate','Calm':'minimal','Fancy':'luxury','Sophisticated':'elegant','Vintage':'retro','Loud':'bold','Playful':'playful','Cute':'friendly','Happy':'friendly','Futuristic':'technical','Innovative':'modern','Awkward':'quirky'}
 STRUCT={'Sans/Geometric':'sans:geometric','Sans/Grotesque':'sans:grotesque','Sans/Neo Grotesque':'sans:neo','Sans/Humanist':'sans:humanist','Sans/Rounded':'sans:rounded','Sans/Superellipse':'sans:square','Serif/Didone':'serif:didone','Serif/Fat Face':'serif:fatface','Serif/Humanist Venetian':'serif:humanist','Serif/Old Style Garalde':'serif:oldstyle','Serif/Transitional':'serif:transitional','Slab/Clarendon':'serif:clarendon','Script/Formal':'calli:formal','Script/Handwritten':'calli:handwritten','Script/Informal':'calli:informal','Theme/Brush':'calli:brush'}

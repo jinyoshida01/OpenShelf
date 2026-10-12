@@ -30,7 +30,7 @@ jobs:
       - run: npm run desktop:build
       - uses: actions/upload-artifact@v4
         with:
-          name: Open-Shelf-${{ matrix.os }}-preview
+          name: OpenShelf-${{ matrix.os }}-preview
           path: |
             src-tauri/target/release/bundle/dmg/*.dmg
             src-tauri/target/release/bundle/nsis/*.exe

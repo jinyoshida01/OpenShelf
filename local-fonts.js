@@ -13,7 +13,7 @@ function db() {
     r.onupgradeneeded=()=>r.result.createObjectStore('fonts',{keyPath:'id'});
     r.onsuccess=()=>resolve(r.result);
     r.onerror=()=>reject(r.error);
-    r.onblocked=()=>reject(new Error('Close other Open Shelf tabs and try again.'));
+    r.onblocked=()=>reject(new Error('Close other OpenShelf tabs and try again.'));
   }).catch(e=>{dbPromise=null;throw e;});
   return dbPromise;
 }
@@ -66,7 +66,7 @@ function render(){change();
   box.innerHTML=`<header class="page-head"><h1>Local Fonts</h1><p><span class="copy-line">Import TTF, OTF, WOFF or WOFF2 files.</span> <span class="copy-line">Your fonts and notes stay in this browser on this device.</span> <span class="copy-line">Clearing site data removes them; keep your original files.</span></p></header><div class="local-import"><label class="btn primary" for="local-files">Import fonts</label><input class="sr" id="local-files" type="file" multiple accept=".ttf,.otf,.woff,.woff2"><span class="meta">Up to 20 MB per file. Manually added fonts may not be open-source. Verify their licence and usage rights yourself before using or sharing them.</span><button class="btn sm" data-local-action="backup" ${records.length?'':'disabled'} aria-describedby="local-export-help">Export collection</button><label class="btn sm" for="local-backup">Import collection</label><input id="local-backup" class="sr" type="file" accept=".json,application/json"></div><p class="meta" id="local-export-help"><span class="copy-line">Export collection saves every font file and its details in one JSON file.</span> <span class="copy-line">Use Import collection to restore it in another browser or on another device.</span></p><p id="local-notice" role="status">${esc(notice)}</p>${failed.size?`<div class="status-note">${failed.size} stored font file(s) could not load and are hidden from search. <button class="linkbtn" data-local-action="retry">Retry loading</button></div>`:''}${editing?editor(records.find(r=>r.id===editing)):`<div class="knowledge-tools"><label class="searchwrap">Search local fonts<input id="local-search" type="search" placeholder="Name, designer, description or tags" value="${esc(query)}"></label><label>Category<select id="local-category" class="sel"><option value="">All categories</option>${Object.entries(cats).map(([k,v])=>`<option value="${k}" ${category===k?'selected':''}>${v}</option>`).join('')}</select></label></div><p class="count" id="local-count"></p><div id="local-results" class="local-grid"></div>`}`;
   if(!editing)list();
 }
-async function show(){document.title='Local Fonts | Open Shelf';try{await ready();render();}catch(e){container().innerHTML='<header class="page-head"><h1>Local Fonts</h1><p>Browser storage is unavailable. Enable site storage or leave private browsing, then reload to import fonts.</p></header>';}}
+async function show(){document.title='Local Fonts | OpenShelf';try{await ready();render();}catch(e){container().innerHTML='<header class="page-head"><h1>Local Fonts</h1><p>Browser storage is unavailable. Enable site storage or leave private browsing, then reload to import fonts.</p></header>';}}
 async function importOne(file,meta={}){
   if(file.size>20*1024*1024)throw new Error('File exceeds 20 MB');
   if(!/\.(ttf|otf|woff2?)$/i.test(file.name))throw new Error('Use a TTF, OTF, WOFF or WOFF2 file');
@@ -87,7 +87,7 @@ document.addEventListener('change',async e=>{
   try{
     if(e.target.id==='local-backup'){
       const f=files[0];if(!f)return;if(f.size>150*1024*1024)throw new Error('Backup is too large');
-      const data=JSON.parse(await f.text());if(data.format!=='openshelf-local-v1'||!Array.isArray(data.fonts))throw new Error('Choose an exported Open Shelf collection');
+      const data=JSON.parse(await f.text());if(data.format!=='openshelf-local-v1'||!Array.isArray(data.fonts))throw new Error('Choose an exported OpenShelf collection');
       for(const r of data.fonts){try{const bin=Uint8Array.from(atob(r.data),c=>c.charCodeAt(0));const ok=await importOne(new File([bin],String(r.filename)),r);ok?added++:duplicates++;}catch(err){errors.push(String(r.filename)+': '+err.message);}}
     }else for(const f of files){try{const ok=await importOne(f);ok?added++:duplicates++;}catch(err){errors.push(f.name+': '+err.message);}}
     notice=`Imported ${added} font${added===1?'':'s'}.${duplicates?' '+duplicates+' duplicate(s) skipped.':''}${errors.length?' '+errors.join(' · '):''}`;

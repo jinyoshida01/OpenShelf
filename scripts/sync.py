@@ -18,7 +18,7 @@ from font_labels import parse_labels
 
 ROOT = Path(__file__).resolve().parent.parent
 CACHE = ROOT / '.cache'
-SITE = 'https://jinyoshida01.github.io/open-shelf/'
+SITE = 'https://jinyoshida01.github.io/OpenShelf/'
 API = 'https://api.github.com/repos/google/fonts/'
 LICENSE = 'https://creativecommons.org/licenses/by-sa/4.0/'
 
@@ -69,7 +69,7 @@ def knowledge_index(files, destination, commit, license_text):
     """Copy only directory thumbnails and credits; articles stay on Google Fonts."""
     destination.mkdir()
     (destination/'LICENSE.txt').write_bytes(license_text)
-    (destination/'SOURCE-NOTICE.md').write_text(files['README.md'].read_text()+'\nSource snapshot: '+commit+'\nOpen Shelf displays original excerpts and thumbnails in a directory linking to Google Fonts. Article bodies are not reproduced. Thumbnails are scaled for display; source files and metadata are unchanged.\n')
+    (destination/'SOURCE-NOTICE.md').write_text(files['README.md'].read_text()+'\nSource snapshot: '+commit+'\nOpenShelf displays original excerpts and thumbnails in a directory linking to Google Fonts. Article bodies are not reproduced. Thumbnails are scaled for display; source files and metadata are unchanged.\n')
     shutil.copyfile(files['contributors.textproto'], destination/'contributors.textproto')
     index=[]
     for path in sorted(files):

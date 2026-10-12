@@ -481,7 +481,7 @@ pub async fn export_fonts(
         .duration_since(std::time::UNIX_EPOCH)
         .map_err(|e| e.to_string())?
         .as_millis();
-    let out = parent.join(format!("Open Shelf fonts {stamp}"));
+    let out = parent.join(format!("OpenShelf fonts {stamp}"));
     fs::create_dir(&out).map_err(|e| e.to_string())?;
     let mut portable = data.clone();
     for r in portable.fonts.values_mut() {

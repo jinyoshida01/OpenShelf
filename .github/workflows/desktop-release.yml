@@ -66,7 +66,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           tagName: desktop-v__VERSION__
-          releaseName: Open Shelf __VERSION__
+          releaseName: OpenShelf __VERSION__
           releaseBody: Desktop font downloads, activation and offline browsing. See the release notes before installing.
           releaseDraft: true
           prerelease: false

@@ -1,6 +1,6 @@
-# Open Shelf
+# OpenShelf
 
-A public library of 2,065 open-source font families (1,950 from Google Fonts and 115 additional families from Fontsource), a pairing workbench, private local font collections and a desktop font manager for macOS and Windows (preview). Published at https://jinyoshida01.github.io/open-shelf/.
+A public library of 2,065 open-source font families (1,950 from Google Fonts and 115 additional families from Fontsource), a pairing workbench, private local font collections and a desktop font manager for macOS and Windows (preview). Published at https://jinyoshida01.github.io/OpenShelf/.
 
 - Preview text, weights and styles; search and filter the public catalog, including by source.
 - Manage saved fonts and pairings on the Collections page or in the side panel; both share the same browser-local data, import/export, sharing and embed controls.
@@ -26,7 +26,7 @@ Additional Fontsource families are taken from the `other` catalog in `fontsource
 
 Removed fonts disappear on the next successful refresh. Preview failures hide a family from search, recommendations and selectors for that visit; Retry loading clears that temporary state. A failed requested style is retried using the regular style before excluding the family. Fonts are not permanently marked unavailable because of a visitor's network problem.
 
-The `Publish Open Shelf` GitHub Actions workflow refreshes content weekly on Monday at 03:23 UTC and supports manual runs. It validates, commits the snapshot using `Content: Refresh fonts and Knowledge links`, and deploys the resulting artifact to GitHub Pages. Normal pushes deploy the checked-in snapshot. In repository Settings → Pages, set Source to **GitHub Actions**. The workflow uses only the repository's built-in token, with separate build and deployment permissions. Failed refreshes leave the last deployment live and show a failed Actions run. GitHub can disable scheduled workflows after 60 days without repository activity; re-enable from Actions if necessary. No external service or paid subscription is required.
+The `Publish OpenShelf` GitHub Actions workflow refreshes content weekly on Monday at 03:23 UTC and supports manual runs. It validates, commits the snapshot using `Content: Refresh fonts and Knowledge links`, and deploys the resulting artifact to GitHub Pages. Normal pushes deploy the checked-in snapshot. In repository Settings → Pages, set Source to **GitHub Actions**. The workflow uses only the repository's built-in token, with separate build and deployment permissions. Failed refreshes leave the last deployment live and show a failed Actions run. GitHub can disable scheduled workflows after 60 days without repository activity; re-enable from Actions if necessary. No external service or paid subscription is required.
 
 ## Licensing and attribution
 
@@ -34,7 +34,7 @@ Font software retains each project's own licence. The catalog links to its sourc
 
 Google Fonts Knowledge excerpts and thumbnails are licensed under **Creative Commons Attribution-ShareAlike 4.0 International**, as declared in https://github.com/google/fonts/tree/main/cc-by-sa. The licence is reproduced in `knowledge-assets/LICENSE.txt`. Each card names its authors and links to the original Google Fonts article. The directory links to the licence and GitHub source. Original attribution metadata, including reviewers, is preserved in `knowledge-assets/credits/`; the contributor directory is at `knowledge-assets/contributors.textproto`.
 
-Thumbnails are scaled for display; original asset files and excerpts are unchanged. Open Shelf's Knowledge directory layout and adaptations are also available under CC BY-SA 4.0. Article bodies are not copied. There is no Google endorsement or affiliation. Pairing notes are original editorial comments with references; they do not reproduce external articles or screenshots. Award-inspired pairings are suggestions, not assertions of the exact typefaces used by the award winner.
+Thumbnails are scaled for display; original asset files and excerpts are unchanged. OpenShelf's Knowledge directory layout and adaptations are also available under CC BY-SA 4.0. Article bodies are not copied. There is no Google endorsement or affiliation. Pairing notes are original editorial comments with references; they do not reproduce external articles or screenshots. Award-inspired pairings are suggestions, not assertions of the exact typefaces used by the award winner.
 
 ## Checks
 
@@ -54,10 +54,10 @@ The checks cover external article destinations, thumbnail availability and attri
 The website stays on GitHub Pages. The Tauri application bundles the same interface and catalog, using the system web engine instead of shipping a separate browser. GitHub Releases hosts installers, signed update packages and `latest.json`; GitHub Pages alone cannot activate system fonts or install application updates.
 
 - Download original TTF/OTF families inside the app, including their licence notices. The current desktop index contains 2,053 downloadable families. Families without suitable files have no download button.
-- Enable or disable downloaded families and saved collections. A font remains enabled while any enabled collection or individual toggle needs it. Fonts are available to other applications while Open Shelf is running, are unregistered on normal exit, and restore on next launch. Existing applications may need to reopen their font picker.
+- Enable or disable downloaded families and saved collections. A font remains enabled while any enabled collection or individual toggle needs it. Fonts are available to other applications while OpenShelf is running, are unregistered on normal exit, and restore on next launch. Existing applications may need to reopen their font picker.
 - Browse offline with only downloaded or OS-installed catalog fonts. Local Fonts also lists other installed fonts. Imported/downloaded previews work without system activation. Offline mode persists across launches and disables downloads, external links and update checks.
 - Import TTF/OTF files and edit description, category, designer and tags. Export writes the files, licence notices and metadata to a chosen folder. Native exported metadata restoration is not implemented yet; individual exported font files can be imported. Browser Local Fonts retains its existing JSON backup/restore.
-- Fonts installed outside Open Shelf are read-only. The app never removes or changes system fonts. Downloaded/imported files and activation settings stay in the app's local data directory. Browser collections and local font files are separate from desktop storage; use the website's collection export/import to transfer saved public families.
+- Fonts installed outside OpenShelf are read-only. The app never removes or changes system fonts. Downloaded/imported files and activation settings stay in the app's local data directory. Browser collections and local font files are separate from desktop storage; use the website's collection export/import to transfer saved public families.
 - Previews load when visible, files download sequentially, local results are paged, and there is no background catalog polling. The bundled catalog refreshes with an app release. Fontsource downloads use the stated subset; Google Fonts downloads use original upstream files.
 
 Build prerequisites: Node.js, Rust, the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for the platform, and WebView2 on Windows. Run:
@@ -89,3 +89,9 @@ The public library contains 2,065 open-source families. Google Fonts family-wide
 Collections support list/grid specimens, desktop column counts, per-collection icons and colour markers, plus shared or custom preview text. Settings persist and travel in collection exports. Manually imported fonts appear in search and can be saved to collections; their unverified licence status is labelled. Fonts are never made open-source by importing them. Exported collection references do not upload or embed private font files, and web embed snippets omit them.
 
 UI fonts are bundled WOFF2 assets using private CSS family names, with original licence notices. The outlined SVG wordmark cannot change when specimen fonts load or system fonts are disabled. Font preview failures are hidden without rebuilding the page, preserving the current reading position. Mobile hides desktop column controls and collapses the menu without a final spacing jump. The native status bar appears above navigation and uses an accessible offline switch.
+
+## Collection controls and desktop status
+
+The list/grid switch and column setting apply to every collection, with matching controls on the page and in the side panel. Colour swatches and icon choices are available from each collection header even while collapsed. A floating Collections button appears when navigation scrolls out of view. Desktop collections offer batch downloads and an animated enable switch, with separate green downloaded and enabled indicators. Fonts required by another enabled collection or an individual toggle remain enabled. Online/offline changes keep the switch mounted and animate the library transition.
+
+Branding is OpenShelf. The application identifier and browser storage keys are unchanged so existing local data is retained. The repository and Pages address use `OpenShelf`.

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://jinyoshida01.github.io/open-shelf/sitemap.xml
+Sitemap: https://jinyoshida01.github.io/OpenShelf/sitemap.xml

@@ -1,6 +1,6 @@
 {
-  "name": "Open Shelf: Open Source Font Library",
-  "short_name": "Open Shelf",
+  "name": "OpenShelf: Open Source Font Library",
+  "short_name": "OpenShelf",
   "description": "Browse over 2,000 free, open-source fonts with live previews, pairings and collections.",
   "start_url": "./",
   "scope": "./",

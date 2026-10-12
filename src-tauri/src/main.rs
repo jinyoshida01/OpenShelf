@@ -10,7 +10,7 @@ use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_updater::UpdaterExt;
 
 const UPDATE_URL: &str =
-    "https://github.com/jinyoshida01/open-shelf/releases/latest/download/latest.json";
+    "https://github.com/jinyoshida01/OpenShelf/releases/latest/download/latest.json";
 #[tauri::command]
 async fn check_update(
     app: tauri::AppHandle,
@@ -146,7 +146,7 @@ fn main() {
             open_external
         ])
         .build(tauri::generate_context!())
-        .expect("Could not launch Open Shelf");
+        .expect("Could not launch OpenShelf");
     app.run(|app, event| {
         if matches!(event, tauri::RunEvent::Exit) {
             let state = app.state::<library::ManagerState>();

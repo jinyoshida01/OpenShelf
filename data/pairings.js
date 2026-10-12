@@ -121,7 +121,7 @@ window.OPEN_SHELF_PAIRINGS = [
       "classic"
     ],
     "title": "Playfair Display and Open Sans",
-    "note": "Open Sans was suggested as a companion to Playfair Display in a typography discussion. Open Shelf recommends a generous heading size and restrained paragraph width.",
+    "note": "Open Sans was suggested as a companion to Playfair Display in a typography discussion. OpenShelf recommends a generous heading size and restrained paragraph width.",
     "refs": [
       {
         "label": "r/typography: pairing discussion",
@@ -157,7 +157,7 @@ window.OPEN_SHELF_PAIRINGS = [
       "modern"
     ],
     "title": "Archivo Black and Work Sans",
-    "note": "Open Shelf interpretation of the bold, clean agency presentation in Locomotive’s 2014 Site of the Day. These are suggested open-source alternatives, not identified fonts from the original.",
+    "note": "OpenShelf interpretation of the bold, clean agency presentation in Locomotive’s 2014 Site of the Day. These are suggested open-source alternatives, not identified fonts from the original.",
     "refs": [
       {
         "label": "Awwwards: Locomotive, SOTD 2014",
@@ -193,7 +193,7 @@ window.OPEN_SHELF_PAIRINGS = [
       "modern"
     ],
     "title": "Instrument Serif and Instrument Sans",
-    "note": "Open Shelf interpretation of the expressive serif showcase discussed in Locomotive’s Pangram Pangram work. Use a large serif headline and a quiet sans. This does not reproduce the project’s commercial fonts.",
+    "note": "OpenShelf interpretation of the expressive serif showcase discussed in Locomotive’s Pangram Pangram work. Use a large serif headline and a quiet sans. This does not reproduce the project’s commercial fonts.",
     "refs": [
       {
         "label": "Locomotive: Pangram Pangram awards",
@@ -237,7 +237,7 @@ window.OPEN_SHELF_PAIRINGS = [
       "modern"
     ],
     "title": "Bitter and Public Sans",
-    "note": "Open Shelf recommendation. Open Shelf application of contrasting structures: sturdy slab headlines with a neutral sans for supporting text.",
+    "note": "OpenShelf recommendation. OpenShelf application of contrasting structures: sturdy slab headlines with a neutral sans for supporting text.",
     "refs": [
       {
         "label": "Google Fonts Knowledge: pairing typefaces",
@@ -255,7 +255,7 @@ window.OPEN_SHELF_PAIRINGS = [
       "editorial"
     ],
     "title": "Bricolage Grotesque and Literata",
-    "note": "Open Shelf recommendation. Expressive headings paired with a reading-oriented serif. Keep the heading short so its character does not overwhelm the text.",
+    "note": "OpenShelf recommendation. Expressive headings paired with a reading-oriented serif. Keep the heading short so its character does not overwhelm the text.",
     "refs": [
       {
         "label": "Google Fonts Knowledge: pairing typefaces",
@@ -273,7 +273,7 @@ window.OPEN_SHELF_PAIRINGS = [
       "modern"
     ],
     "title": "Dm Serif Text and Manrope",
-    "note": "Open Shelf recommendation. A serif heading with open sans-serif paragraphs. Compare their apparent sizes, not just the point sizes.",
+    "note": "OpenShelf recommendation. A serif heading with open sans-serif paragraphs. Compare their apparent sizes, not just the point sizes.",
     "refs": [
       {
         "label": "Google Fonts Knowledge: pairing typefaces",
@@ -291,7 +291,7 @@ window.OPEN_SHELF_PAIRINGS = [
       "editorial"
     ],
     "title": "Gloock and Source Sans 3",
-    "note": "Open Shelf recommendation. A dramatic display serif above a practical text sans. Give the heading room and keep the paragraph measure moderate.",
+    "note": "OpenShelf recommendation. A dramatic display serif above a practical text sans. Give the heading room and keep the paragraph measure moderate.",
     "refs": [
       {
         "label": "Google Fonts Knowledge: pairing typefaces",
@@ -309,7 +309,7 @@ window.OPEN_SHELF_PAIRINGS = [
       "minimal"
     ],
     "title": "Newsreader and Public Sans",
-    "note": "Open Shelf recommendation. A reading-first serif with a restrained sans for a calm editorial hierarchy. Try the sans for navigation and captions too.",
+    "note": "OpenShelf recommendation. A reading-first serif with a restrained sans for a calm editorial hierarchy. Try the sans for navigation and captions too.",
     "refs": [
       {
         "label": "Google Fonts Knowledge: pairing typefaces",
@@ -327,7 +327,7 @@ window.OPEN_SHELF_PAIRINGS = [
       "modern"
     ],
     "title": "Azeret Mono and Ibm Plex Sans",
-    "note": "Open Shelf recommendation. A distinctive mono for compact technical headings, paired with proportional text for longer reading.",
+    "note": "OpenShelf recommendation. A distinctive mono for compact technical headings, paired with proportional text for longer reading.",
     "refs": [
       {
         "label": "Google Fonts Knowledge: pairing typefaces",
@@ -345,7 +345,7 @@ window.OPEN_SHELF_PAIRINGS = [
       "editorial"
     ],
     "title": "Brygada 1918 and Hanken Grotesk",
-    "note": "Open Shelf recommendation. Old-style serif shapes with a straightforward sans. Check matching visual weight before increasing contrast.",
+    "note": "OpenShelf recommendation. Old-style serif shapes with a straightforward sans. Check matching visual weight before increasing contrast.",
     "refs": [
       {
         "label": "Google Fonts Knowledge: pairing typefaces",
@@ -363,7 +363,7 @@ window.OPEN_SHELF_PAIRINGS = [
       "modern"
     ],
     "title": "Fraunces and Commissioner",
-    "note": "Open Shelf recommendation. Soft display detail with a composed text sans. Use the serif for emphasis and let the sans do the everyday work.",
+    "note": "OpenShelf recommendation. Soft display detail with a composed text sans. Use the serif for emphasis and let the sans do the everyday work.",
     "refs": [
       {
         "label": "Google Fonts Knowledge: pairing typefaces",
@@ -381,7 +381,7 @@ window.OPEN_SHELF_PAIRINGS = [
       "bold"
     ],
     "title": "Barlow Condensed and Lora",
-    "note": "Open Shelf recommendation. Narrow sans headings against a wider text serif. The change in width can create hierarchy without relying on very heavy weights.",
+    "note": "OpenShelf recommendation. Narrow sans headings against a wider text serif. The change in width can create hierarchy without relying on very heavy weights.",
     "refs": [
       {
         "label": "Google Fonts Knowledge: pairing typefaces",
@@ -399,7 +399,7 @@ window.OPEN_SHELF_PAIRINGS = [
       "modern"
     ],
     "title": "Syne and Assistant",
-    "note": "Open Shelf recommendation. Unusual headline shapes with economical text. Keep Syne for short statements and test numerals and punctuation in the body.",
+    "note": "OpenShelf recommendation. Unusual headline shapes with economical text. Keep Syne for short statements and test numerals and punctuation in the body.",
     "refs": [
       {
         "label": "Google Fonts Knowledge: pairing typefaces",
@@ -417,7 +417,7 @@ window.OPEN_SHELF_PAIRINGS = [
       "modern"
     ],
     "title": "Unbounded and Onest",
-    "note": "Open Shelf recommendation. Broad, geometric headings above a calmer text face. Allow extra room for the heading rather than tightening it aggressively.",
+    "note": "OpenShelf recommendation. Broad, geometric headings above a calmer text face. Allow extra room for the heading rather than tightening it aggressively.",
     "refs": [
       {
         "label": "Google Fonts Knowledge: pairing typefaces",
@@ -435,7 +435,7 @@ window.OPEN_SHELF_PAIRINGS = [
       "editorial"
     ],
     "title": "Young Serif and Figtree",
-    "note": "Open Shelf recommendation. A characterful serif heading with an understated sans. Adjust the heading weight and line breaks around the actual words.",
+    "note": "OpenShelf recommendation. A characterful serif heading with an understated sans. Adjust the heading weight and line breaks around the actual words.",
     "refs": [
       {
         "label": "Google Fonts Knowledge: pairing typefaces",
@@ -453,7 +453,7 @@ window.OPEN_SHELF_PAIRINGS = [
       "classic"
     ],
     "title": "Archivo and Source Serif 4",
-    "note": "Open Shelf recommendation. Direct sans-serif headlines and sustained serif reading. A useful starting point for a journal or reference site.",
+    "note": "OpenShelf recommendation. Direct sans-serif headlines and sustained serif reading. A useful starting point for a journal or reference site.",
     "refs": [
       {
         "label": "Google Fonts Knowledge: pairing typefaces",
@@ -471,7 +471,7 @@ window.OPEN_SHELF_PAIRINGS = [
       "modern"
     ],
     "title": "Anton and Libre Franklin",
-    "note": "Open Shelf recommendation. Large, compressed display type over a flexible text sans. Keep Anton out of long paragraphs.",
+    "note": "OpenShelf recommendation. Large, compressed display type over a flexible text sans. Keep Anton out of long paragraphs.",
     "refs": [
       {
         "label": "Google Fonts Knowledge: pairing typefaces",
@@ -489,7 +489,7 @@ window.OPEN_SHELF_PAIRINGS = [
       "friendly"
     ],
     "title": "Prata and Karla",
-    "note": "Open Shelf recommendation. Delicate display contrast with a less formal text sans. Use Prata large enough to retain its finer details.",
+    "note": "OpenShelf recommendation. Delicate display contrast with a less formal text sans. Use Prata large enough to retain its finer details.",
     "refs": [
       {
         "label": "Google Fonts Knowledge: pairing typefaces",
@@ -507,7 +507,7 @@ window.OPEN_SHELF_PAIRINGS = [
       "editorial"
     ],
     "title": "Noto Serif and Noto Sans",
-    "note": "Open Shelf application of Google Fonts’ family-pairing guidance. Related design goals provide a starting point; confirm that both chosen families support the same required scripts.",
+    "note": "OpenShelf application of Google Fonts’ family-pairing guidance. Related design goals provide a starting point; confirm that both chosen families support the same required scripts.",
     "refs": [
       {
         "label": "Google Fonts Knowledge: pairing within a family",
@@ -525,7 +525,7 @@ window.OPEN_SHELF_PAIRINGS = [
       "editorial"
     ],
     "title": "Roboto Serif and Roboto",
-    "note": "Open Shelf application of Google Fonts’ family-pairing guidance. Explore a related serif and sans across headings and text; optical sizing can change the balance.",
+    "note": "OpenShelf application of Google Fonts’ family-pairing guidance. Explore a related serif and sans across headings and text; optical sizing can change the balance.",
     "refs": [
       {
         "label": "Google Fonts Knowledge: pairing within a family",
@@ -543,7 +543,7 @@ window.OPEN_SHELF_PAIRINGS = [
       "editorial"
     ],
     "title": "Barlow Condensed and Barlow",
-    "note": "Open Shelf application of Google Fonts’ family-pairing guidance. Contrast width within one related family instead of changing the overall voice.",
+    "note": "OpenShelf application of Google Fonts’ family-pairing guidance. Contrast width within one related family instead of changing the overall voice.",
     "refs": [
       {
         "label": "Google Fonts Knowledge: pairing within a family",
@@ -561,7 +561,7 @@ window.OPEN_SHELF_PAIRINGS = [
       "editorial"
     ],
     "title": "Ibm Plex Serif and Ibm Plex Sans",
-    "note": "Open Shelf application of Google Fonts’ family-pairing guidance. A related serif and sans let structure change while the larger identity remains coherent.",
+    "note": "OpenShelf application of Google Fonts’ family-pairing guidance. A related serif and sans let structure change while the larger identity remains coherent.",
     "refs": [
       {
         "label": "Google Fonts Knowledge: pairing within a family",
@@ -579,7 +579,7 @@ window.OPEN_SHELF_PAIRINGS = [
       "editorial"
     ],
     "title": "Source Serif 4 and Source Sans 3",
-    "note": "Open Shelf application of Google Fonts’ family-pairing guidance. Related serif and sans families are a practical base for multi-level reading interfaces.",
+    "note": "OpenShelf application of Google Fonts’ family-pairing guidance. Related serif and sans families are a practical base for multi-level reading interfaces.",
     "refs": [
       {
         "label": "Google Fonts Knowledge: pairing within a family",

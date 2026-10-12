@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Open Shelf",
+  "productName": "OpenShelf",
   "version": "0.1.0",
   "identifier": "me.jinyoshida.openshelf",
   "build": {
@@ -12,7 +12,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Open Shelf",
+        "title": "OpenShelf",
         "width": 1280,
         "height": 860,
         "minWidth": 760,
@@ -49,7 +49,7 @@
       }
     },
     "shortDescription": "Open-source font library and desktop font manager",
-    "copyright": "Open Shelf by Jin Yoshida. Fonts retain their respective licences."
+    "copyright": "OpenShelf by Jin Yoshida. Fonts retain their respective licences."
   },
   "plugins": {
     "updater": {
