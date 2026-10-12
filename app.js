@@ -23,12 +23,12 @@ const SUBS = {
 };
 const pick = pre => Object.fromEntries(Object.entries(SUBS).filter(([k]) => k.startsWith(pre)));
 const WIDTHS = {condensed:'Condensed', standard:'Standard', wide:'Expanded', adjustable:'Adjustable', unspecified:'Unspecified'};
-const THICKNESS = {100:'Thin · 100',200:'Extra light · 200',300:'Light · 300',400:'Regular · 400',500:'Medium · 500',600:'Semibold · 600',700:'Bold · 700',800:'Extra bold · 800',900:'Black · 900',1000:'Extra black · 1000'};
+const WEIGHTS = {light:'Light',regular:'Regular',heavy:'Heavy'};
 const ROLES = {heading:'Headings',body:'Body text',both:'Headings & body',unspecified:'Not yet classified'};
 const SECTIONS = [
   {id:'category', set:'category', title:'Category', opts:CLS, any:true},
   {id:'role',set:'role',title:'Recommended use',opts:ROLES,any:true,note:'Editorial recommendations, not restrictions. Flexible families appear under both Headings and Body text. Test your chosen weight at its intended size.'},
-  {id:'thickness',set:'thickness',title:'Thickness',opts:THICKNESS,any:true,note:'Find families that include these weights. Set the preview weight using Weight and style above.'},
+  {id:'weight',set:'weight',title:'Weight',opts:WEIGHTS,any:true,note:'Grouped by the visual weight of the default design, not the weights a family offers. These are editorial guides; your preview weight stays independent.'},
   {id:'width', set:'width', title:'Width', opts:WIDTHS, any:true, note:'Based on catalog tags and supported width ranges. Fonts without width data are listed as Unspecified. Adjustable families may appear in several widths.'},
   {id:'writing', set:'writing', title:'Writing system', select:true},
   {id:'source', set:'source', title:'Source', opts:SOURCES, any:true},
@@ -415,13 +415,23 @@ const kindLabel = f => {
   if (k.startsWith('sans:')) return SUBS[k] + ' sans';
   return SUBS[k];
 };
-// A width axis describes supported designs, not the rendered width of a sample.
-// Missing data must not silently classify an unknown font as standard width.
-function fontSupportsWeight(f,weight) {
+// Visual-weight exceptions for designs whose default “Regular” file is notably
+// heavy or light. Keep these family-specific: offered weights and mood tags do
+// not describe the visual weight of the default design.
+const WEIGHT_DESIGNS = {
+  light: new Set(`Alumni Sans Pinstripe|Bungee Hairline|Bungee Outline|Codystar|Gruppo|Julius Sans One|Megrim|Nixie One|Poiret One|Pompiere|Raleway Dots|Stint Ultra Expanded|Text Me One|Thasadith|Tulpen One|Wire One|Zen Loop`.split('|')),
+  heavy: new Set(`Abril Fatface|Agbalumo|Alfa Slab One|Angkor|Anton|Anton SC|Archivo Black|Asset|Badeen Display|Bagel Fat One|Bakbak One|Bangers|Bevan|Black Han Sans|Black Ops One|Boldonse|Bowlby One|Bowlby One SC|Bungee|Bungee Inline|Bungee Shade|Bungee Spice|Bungee Tint|Butcherman|Calistoga|Caprasimo|Carter One|Changa One|Chango|Cherry Bomb One|Chewy|Chicle|Chonburi|Climate Crisis|Coiny|Concert One|Creepster|Dangrek|Darumadrop One|Dela Gothic One|Diplomata|Diplomata SC|Emblema One|Erica One|Exile|Fascinate|Fascinate Inline|Faster One|Frijole|Fruktur|Fugaz One|Gajraj One|Galindo|Goblin One|Gorditas|Gravitas One|Holtwood One SC|Jomhuria|Kavoon|Kenia|Knewave|Konkhmer Sleokchher|Koulen|Kumar One|Lemon|Lilita One|Luckiest Guy|Modak|Mogra|Moul|Nosifer|Oi|Orelega One|Passion One|Patua One|Plaster|Poetsen One|Poller One|Potta One|Protest Guerrilla|Protest Strike|Racing Sans One|Rakkas|Rammetto One|Ranchers|Rowdies|Rubik Beastly|Rubik Bubbles|Rubik Gemstones|Rubik Glitch|Rubik Moonrocks|Rubik Puddles|Rubik Spray Paint|Rubik Wet Paint|Russo One|Seymour One|Shojumaru|Shrikhand|Sigmar|Sigmar One|Slackey|Sonsie One|Spicy Rice|Squada One|Stalinist One|Suez One|Titan One|Ultra|Vina Sans`.split('|'))
+};
+function fontVisualWeight(f) {
+  if(WEIGHT_DESIGNS.light.has(f.n))return 'light';
+  if(WEIGHT_DESIGNS.heavy.has(f.n))return 'heavy';
+  // Use the default cut, never the range of weights available for download.
   const axes=f.axes || [];
   const axis=Array.isArray(axes)?axes.find(a=>a.tag==='wght'):axes.wght;
-  if(axis && Number(axis.min)>0 && Number(axis.max)>=Number(axis.min))return weight>=Number(axis.min) && weight<=Number(axis.max);
-  return (f.w || []).includes(weight);
+  const weights=(f.w || []).map(Number).filter(w=>Number.isFinite(w)&&w>0);
+  const defaultWeight=Number(axis?.defaultValue ?? axis?.default);
+  const weight=defaultWeight>0?defaultWeight:weights.reduce((nearest,w)=>Math.abs(w-400)<Math.abs(nearest-400)?w:nearest,weights[0] || 400);
+  return weight<350?'light':weight>=600?'heavy':'regular';
 }
 function fontRoles(f) {
   const uses=f.roleUses || f.u || [];
@@ -461,7 +471,7 @@ const WRITING_LABELS={'latin':'Latin','latin-ext':'Latin extended','cyrillic-ext
 const writingLabel=k=>WRITING_LABELS[k] || k.split('-').map(w=>w[0].toUpperCase()+w.slice(1)).join(' ');
 const WRITINGS=Object.fromEntries([...new Set(F.flatMap(f=>f.subsets || []))].filter(k=>k!=='menu').map(k=>[k,writingLabel(k)]).sort((a,b)=>a[1].localeCompare(b[1])));
 function matches(f, set, k) {
-  if (set === 'thickness') return fontSupportsWeight(f,Number(k));
+  if (set === 'weight') return fontVisualWeight(f)===k;
   if (set === 'role') { const roles=fontRoles(f); return k==='both'?roles.length===2:k==='unspecified'?!roles.length:roles.includes(k); }
   if (set === 'category') return k==='serif' ? ['serif','slab'].includes(f.c) : k==='slab' ? f.c==='slab' || f.s.includes('serif:slab') : f.c===k;
   if (set === 'width') return (f.widths || fontWidths(f)).includes(k);
@@ -566,7 +576,7 @@ function allCollections(){if(!desktop.enabled)return state.cols;enabledCollectio
 const state = {
   text: store.get('text', ''), size: store.get('size', 48), layout: store.get('layout', 'list'),
   collectionLayout:store.get('collectionLayout','list'), collectionCols:store.get('collectionCols','2'), collectionProofOpen:store.get('collectionProofOpen',false), markerMenu:null,
-  gridCols:store.get('gridCols', '2'), limit:48, enabledOnly:desktop.enabled&&!!savedUI.enabledOnly, sort:savedUI.sort||'az', q:savedUI.q||'', f:{role:new Set(),thickness:new Set(),category:new Set(), width:new Set(), writing:new Set(), source:new Set(), feel:new Set(), app:new Set(), serif:new Set(), sans:new Set(), calli:new Set(), use:new Set(), tech:new Set()}, fmode: store.get('fmode', {}), col:savedUI.col||null,
+  gridCols:store.get('gridCols', '2'), limit:48, enabledOnly:desktop.enabled&&!!savedUI.enabledOnly, sort:savedUI.sort||'az', q:savedUI.q||'', f:{role:new Set(),weight:new Set(),category:new Set(), width:new Set(), writing:new Set(), source:new Set(), feel:new Set(), app:new Set(), serif:new Set(), sans:new Set(), calli:new Set(), use:new Set(), tech:new Set()}, fmode: store.get('fmode', {}), col:savedUI.col||null,
   prov:savedUI.prov||'', mood:savedUI.mood||'',
   pair: store.get('pair', {h:'instrument-serif', b:'inter'}),
   locks:{h:false, b:false}, history:[],
@@ -785,12 +795,12 @@ function buildPanel() {
         ${sec.any || sec.select ? `<span class="fmatch-note">${sec.select?'Choose a writing system':'Match any selection'}</span>` : `<div class="fmode" role="group" aria-label="How picks in ${sec.title} combine"><button data-action="fmode" data-set="${sec.set}" data-mode="any" title="Show fonts with at least one selection">Match any</button><button data-action="fmode" data-set="${sec.set}" data-mode="all" title="Show fonts with every selection">Match all</button></div>`}
         <button class="linkbtn fsection-clear" data-action="clear-section" data-set="${sec.set}" aria-label="Clear ${sec.title} filters" hidden>Clear</button>
       </div>
-      ${sec.select ? `<label class="fwriting-label" for="writing-filter">Supported writing system</label><select class="sel" id="writing-filter"><option value="">All writing systems</option>${Object.entries(WRITINGS).map(([k,l])=>`<option value="${esc(k)}">${esc(l)}</option>`).join('')}</select><p class="fsection-note">Based on the catalog’s character coverage. Coverage for external imports is not yet available.</p>` : `<div class="fchips ${['category','width'].includes(sec.set)?'fchips-tiles':''}">${Object.entries(sec.opts).map(([k,l])=>{
+      ${sec.select ? `<label class="fwriting-label" for="writing-filter">Supported writing system</label><select class="sel" id="writing-filter"><option value="">All writing systems</option>${Object.entries(WRITINGS).map(([k,l])=>`<option value="${esc(k)}">${esc(l)}</option>`).join('')}</select><p class="fsection-note">Based on the catalog’s character coverage. Coverage for external imports is not yet available.</p>` : `<div class="fchips ${['category','width','weight'].includes(sec.set)?'fchips-tiles':''} ${sec.set==='weight'?'fchips-weight':''}">${Object.entries(sec.opts).map(([k,l])=>{
         if(sec.set!=='source' && !F.some(f=>matches(f,sec.set,k)))return '';
-        const rep=sec.set==='thickness' || sec.set==='role'?null:sec.set==='category'?({sans:'inter',serif:'source-serif-4',slab:'roboto-slab',mono:'jetbrains-mono',display:'abril-fatface',script:'dancing-script'})[k]:sec.set==='width'?null:REP[k];
+        const rep=sec.set==='weight' || sec.set==='role'?null:sec.set==='category'?({sans:'inter',serif:'source-serif-4',slab:'roboto-slab',mono:'jetbrains-mono',display:'abril-fatface',script:'dancing-script'})[k]:sec.set==='width'?null:REP[k];
         const r=BY[rep];
         const ag=sec.set==='width'?`<span class="width-sample width-${k}" aria-hidden="true">${k==='adjustable'?'↔':k==='unspecified'?'?':'Aa'}</span>`:r?`<span class="fag" data-filter-sample="${r.slug}" aria-hidden="true" style="font-family:${fam(r)};font-weight:${pvWeight(r)}">${k==='code'?'{ }':'Ag'}</span>`:'';
-        return `<button class="fchip" data-action="fchip" data-set="${sec.set}" data-val="${k}" aria-pressed="false">${sec.set==='thickness'?`<span class="thickness-sample" style="--stroke:${Math.max(1,Number(k)/100)}px" aria-hidden="true"></span>`:ag}<span class="fchip-label">${esc(l)}</span><span class="c"></span></button>`;
+        return `<button class="fchip" data-action="fchip" data-set="${sec.set}" data-val="${k}" aria-pressed="false">${sec.set==='weight'?`<span class="weight-sample weight-${k}" aria-hidden="true">Ag</span>`:ag}<span class="fchip-label">${esc(l)}</span><span class="c"></span></button>`;
       }).join('')}</div>`}
       ${sec.note?`<p class="fsection-note">${sec.note}</p>`:''}
     </details>`).join('')}

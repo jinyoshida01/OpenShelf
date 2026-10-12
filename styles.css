@@ -641,7 +641,11 @@ a,button,select,input,textarea,summary,label{-webkit-tap-highlight-color:transpa
 h2.sec,.pfilters h2{letter-spacing:-.015em;line-height:1.25}
 .fag{line-height:1.5;overflow:visible;min-height:24px}
 .fchips-tiles .fag{height:auto;min-height:36px;line-height:1.55;overflow:visible}
-.thickness-sample{display:block;flex:none;width:20px;height:var(--stroke);border-radius:2px;background:currentColor}
+.fchips-weight{grid-template-columns:repeat(3,minmax(0,1fr))}
+.fchips-weight .fchip{grid-template-columns:minmax(0,1fr);justify-items:center;padding:10px 4px;gap:3px}
+.weight-sample{font-family:'OpenShelf Display',sans-serif;font-size:27px;line-height:1.6;min-height:44px;overflow:visible}
+.weight-light{font-weight:200}.weight-regular{font-weight:400}.weight-heavy{font-weight:900}
+.fchips-weight .c{font-variant-numeric:tabular-nums;margin-left:0;justify-self:center}
 .usage-badge{display:inline-flex;align-items:center;max-width:100%;padding:3px 8px;border:1px solid var(--line2);border-radius:6px;color:var(--muted);font:400 11px/1.45 var(--ui);white-space:normal;vertical-align:middle}
 .role-advice{display:block;margin-top:6px;color:var(--muted);font-size:12px;line-height:1.6}
 .rand-role-note{font-size:12px;line-height:1.6;color:var(--muted);margin:10px 0}
