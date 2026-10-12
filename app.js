@@ -1081,11 +1081,12 @@ function toggleCollection(id){
   $('.ci-head',card).setAttribute('aria-expanded',String(opening));
   if(!body)return;body.inert=!opening;
   if(opening)updateCollectionPreviews();
-  if(reducedMotion()){if(!opening)body.remove();return;}
+  if(reducedMotion()){body.style.overflow='';if(!opening)body.remove();return;}
+  body.style.overflow='hidden';
   const to=opening?body.scrollHeight:0;
   const padding=getComputedStyle(body).paddingBottom;
   const animation=body.animate([{height:from+'px',paddingBottom:opening&&from===0?'0px':padding,opacity:opening?.2:1},{height:to+'px',paddingBottom:opening?padding:'0px',opacity:opening?1:0}],{duration:320,easing:'cubic-bezier(.22,1,.36,1)',fill:'both'});
-  animation.finished.then(()=>{if(!opening&&!state.open.has(id))body.remove();animation.cancel();}).catch(()=>{});
+  animation.finished.then(()=>{if(!opening&&!state.open.has(id))body.remove();body.style.overflow='';animation.cancel();}).catch(()=>{});
  });
  updateCollectionPreviews();observeCollectionFonts();
 }
@@ -1342,12 +1343,13 @@ function route() {
   const articleRoute=[routeHash,location.hash].some(h=>h?.startsWith('#/knowledge'));
   routeHash=location.hash;
   pageTransition?.skipTransition();
-  if (changed && !articleRoute && !reducedMotion() && document.startViewTransition) {
+  if (changed && !articleRoute && !matchMedia('(max-width:900px)').matches && !reducedMotion() && document.startViewTransition) {
     pageTransition=document.startViewTransition(renderRoute);
     pageTransition.finished.catch(()=>{});
   } else { renderRoute(); if(changed) enterMotion($('main > section:not([hidden])')); }
 }
 function renderRoute() {
+  closeFPanel();
   closePop();
   closeDrawer();
   setNavOpen(false);
@@ -1446,7 +1448,7 @@ document.addEventListener('click', e => {
   switch (a) {
     case 'fchip': { const set = state.f[t.dataset.set]; set.has(t.dataset.val) ? set.delete(t.dataset.val) : set.add(t.dataset.val); refilter(); break; }
     case 'fpanel-hide': setFPHidden(true); $('[data-action="fpanel-open"]').focus(); break;
-    case 'fpanel-open': if (matchMedia('(min-width: 901px)').matches) { setFPHidden(false); const h = $('#fpanel .fp-hide'); if (h) h.focus(); break; } $('#fpanel').classList.add('on'); t.setAttribute('aria-expanded', 'true'); setTimeout(() => { const c = $('#fpanel .fp-close'); if (c) c.focus(); }, 50); break;
+    case 'fpanel-open': if (matchMedia('(min-width: 901px)').matches) { setFPHidden(false); const h = $('#fpanel .fp-hide'); if (h) h.focus(); break; } $('#view-library').getAnimations().forEach(a=>a.cancel());document.body.classList.add('filters-open');$('#fpanel').classList.add('on'); t.setAttribute('aria-expanded', 'true'); setTimeout(() => { const c = $('#fpanel .fp-close'); if (c) c.focus(); }, 50); break;
     case 'fpanel-close': closeFPanel(); break;
     case 'cardi': { const sl = t.dataset.slug; const f = BY[sl]; state.card[sl] = Object.assign({}, state.card[sl], {i: !libI(f)}); replaceCard(sl, '[data-action="cardi"]'); break; }
     case 'fmode': state.fmode[t.dataset.set] = t.dataset.mode; store.set('fmode', state.fmode); refilter(); break;
@@ -1565,7 +1567,7 @@ document.addEventListener('keydown', e => {
 $('#scrim').addEventListener('click', closeDrawer);
 function setFPW(w) { w = Math.round(Math.max(200, Math.min(440, w))); document.documentElement.style.setProperty('--fp-w', w + 'px'); const r = $('#fp-resize'); if (r) r.setAttribute('aria-valuenow', w); store.set('fpw', w); }
 function setFPHidden(h) { $('#view-library').classList.toggle('fp-off', h); store.set('fphidden', h); const b = $('[data-action="fpanel-open"]'); if (b) b.setAttribute('aria-expanded', String(!h)); }
-function closeFPanel() { const fp = $('#fpanel'); if (!fp.classList.contains('on')) return; fp.classList.remove('on'); const b = $('[data-action="fpanel-open"]'); b.setAttribute('aria-expanded', 'false'); b.focus(); }
+function closeFPanel() { document.body.classList.remove('filters-open');const fp = $('#fpanel'); if (!fp.classList.contains('on')) return; fp.classList.remove('on'); const b = $('[data-action="fpanel-open"]'); b.setAttribute('aria-expanded', 'false'); b.focus(); }
 document.addEventListener('toggle', e => { if (e.target.matches && e.target.matches('#fpanel .fsec')) { store.set('fclosed', $$('#fpanel .fsec').filter(d => !d.open).map(d => d.dataset.sec)); } }, true);
 window.addEventListener('resize', () => closePop());
 document.addEventListener('input', e => { const t = e.target; if (!t.matches('#adjust input[type=range][data-adj]')) return; const [sd, k] = t.dataset.adj.split('.'); state.pair[sd][k] = +t.value; applyBuilderStyles(); });
@@ -1590,7 +1592,7 @@ $('#q').value=state.q;$('#sort').value=state.sort;
 setupProof();
 renderMadeBy();
 $('#last-updated').classList.add('meta-row');
-$('#last-updated').innerHTML = `<span>Website updated <time datetime="2026-10-12">12 October 2026</time></span><span>Font catalog checked <time datetime="${esc(catalog.updatedAt)}">${esc(catalog.updatedAt)}</time></span><span>Knowledge synced <time datetime="${esc(window.OPEN_SHELF_KNOWLEDGE.updatedAt)}">${esc(window.OPEN_SHELF_KNOWLEDGE.updatedAt)}</time></span>`;
+$('#last-updated').innerHTML = `<span>Website updated <time datetime="2026-10-13">13 October 2026</time></span><span>Font catalog checked <time datetime="${esc(catalog.updatedAt)}">${esc(catalog.updatedAt)}</time></span><span>Knowledge synced <time datetime="${esc(window.OPEN_SHELF_KNOWLEDGE.updatedAt)}">${esc(window.OPEN_SHELF_KNOWLEDGE.updatedAt)}</time></span>`;
 buildPanel();
 (function setupFPanel() {
   const r = $('#fp-resize');
