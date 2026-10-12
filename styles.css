@@ -632,3 +632,17 @@ a,button,select,input,textarea,summary,label{-webkit-tap-highlight-color:transpa
  .fmode button{min-height:32px}
  .fsection-clear{min-height:36px}
 }
+
+/* Recommended roles, wrapping pairing filters, and unclipped type samples. */
+#prov-seg{display:flex;flex-wrap:wrap;align-items:center;gap:4px;max-width:100%;height:auto;border:0;border-radius:0;padding:0}
+#prov-seg button{width:auto;min-height:36px;height:auto;padding:8px 14px;font-size:13px;line-height:1.35;white-space:normal;border:1px solid var(--line2)}
+#prov-seg button[aria-pressed="true"]{border-color:var(--hi)}
+#main .page-head h1,.desktop-app #view-local .page-head h1{letter-spacing:-.02em;line-height:1.12;font-kerning:normal}
+h2.sec,.pfilters h2{letter-spacing:-.015em;line-height:1.25}
+.fag{line-height:1.5;overflow:visible;min-height:24px}
+.fchips-tiles .fag{height:auto;min-height:36px;line-height:1.55;overflow:visible}
+.thickness-sample{display:block;flex:none;width:20px;height:var(--stroke);border-radius:2px;background:currentColor}
+.usage-badge{display:inline-flex;align-items:center;max-width:100%;padding:3px 8px;border:1px solid var(--line2);border-radius:6px;color:var(--muted);font:400 11px/1.45 var(--ui);white-space:normal;vertical-align:middle}
+.role-advice{display:block;margin-top:6px;color:var(--muted);font-size:12px;line-height:1.6}
+.rand-role-note{font-size:12px;line-height:1.6;color:var(--muted);margin:10px 0}
+.bfoot .usage-badge{margin-left:8px}

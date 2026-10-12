@@ -2,7 +2,9 @@
 
 A public library of 2,065 open-source font families (1,950 from Google Fonts and 115 additional families from Fontsource), a pairing workbench, private local font collections and a desktop font manager for macOS and Windows (preview). Published at https://jinyoshida01.github.io/OpenShelf/.
 
-- Preview text, weights and styles; filter by category, width, writing system, source, feeling, appearance, use case and font features. Visual filter tiles, per-section clearing and saved selections work on desktop and mobile.
+- Preview text, weights and styles; filter by category, thickness, heading/body recommendation, width, writing system, source, feeling, appearance, use case and font features. Visual filter tiles, per-section clearing and saved selections work on desktop and mobile.
+- Heading/body labels are editorial recommendations based on family-specific uses, catalog tags and conservative category fallbacks. The randomiser always respects those roles, including locked fonts; manually selected pairings remain unrestricted.
+- Thickness filters match supported font weights (including continuous variable weight ranges), independently of the preview weight.
 - Width choices include Condensed, Standard, Expanded, Adjustable and Unspecified. They use catalog labels, family names and declared `wdth` ranges; missing width data stays unspecified. A variable family can support several widths. Writing-system coverage comes from catalog subsets; external imports do not yet expose this metadata.
 - Manage saved fonts and pairings on the Collections page or in the side panel; both share the same browser-local data, import/export, sharing and embed controls.
 - Collection specimens can use font names, shared page text or custom text saved per collection. Preview settings persist locally and travel with collection exports.

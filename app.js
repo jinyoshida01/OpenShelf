@@ -23,8 +23,12 @@ const SUBS = {
 };
 const pick = pre => Object.fromEntries(Object.entries(SUBS).filter(([k]) => k.startsWith(pre)));
 const WIDTHS = {condensed:'Condensed', standard:'Standard', wide:'Expanded', adjustable:'Adjustable', unspecified:'Unspecified'};
+const THICKNESS = {100:'Thin · 100',200:'Extra light · 200',300:'Light · 300',400:'Regular · 400',500:'Medium · 500',600:'Semibold · 600',700:'Bold · 700',800:'Extra bold · 800',900:'Black · 900',1000:'Extra black · 1000'};
+const ROLES = {heading:'Headings',body:'Body text',both:'Headings & body',unspecified:'Not yet classified'};
 const SECTIONS = [
   {id:'category', set:'category', title:'Category', opts:CLS, any:true},
+  {id:'role',set:'role',title:'Recommended use',opts:ROLES,any:true,note:'Editorial recommendations, not restrictions. Flexible families appear under both Headings and Body text. Test your chosen weight at its intended size.'},
+  {id:'thickness',set:'thickness',title:'Thickness',opts:THICKNESS,any:true,note:'Find families that include these weights. Set the preview weight using Weight and style above.'},
   {id:'width', set:'width', title:'Width', opts:WIDTHS, any:true, note:'Based on catalog tags and supported width ranges. Fonts without width data are listed as Unspecified. Adjustable families may appear in several widths.'},
   {id:'writing', set:'writing', title:'Writing system', select:true},
   {id:'source', set:'source', title:'Source', opts:SOURCES, any:true},
@@ -365,6 +369,7 @@ F.splice(0, F.length, ...[...catalog.fonts, ...(window.OPEN_SHELF_FONTSOURCE?.fo
   f.source = raw.source || 'google';
   f.c = prior.c || raw.c;
   f.p = prior.p || raw.d;
+  f.roleUses=prior.u || null; // Prefer family-specific editorial advice over category defaults.
   f.u = prior.u || ({sans:['body','ui','headlines'],serif:['body','editorial'],mono:['code','data'],display:['headlines','posters'],script:['branding','invitations']}[f.c] || ['headlines']);
   f.t = [...new Set([...(prior.t || []), ...(raw.labels?.t || [])])];
   f.a = [...new Set([...(prior.a || []), ...(raw.labels?.a || []), ...(raw.color ? ['color'] : [])])];
@@ -412,6 +417,29 @@ const kindLabel = f => {
 };
 // A width axis describes supported designs, not the rendered width of a sample.
 // Missing data must not silently classify an unknown font as standard width.
+function fontSupportsWeight(f,weight) {
+  const axes=f.axes || [];
+  const axis=Array.isArray(axes)?axes.find(a=>a.tag==='wght'):axes.wght;
+  if(axis && Number(axis.min)>0 && Number(axis.max)>=Number(axis.min))return weight>=Number(axis.min) && weight<=Number(axis.max);
+  return (f.w || []).includes(weight);
+}
+function fontRoles(f) {
+  const uses=f.roleUses || f.u || [];
+  // Decorative/display defaults must never turn into body recommendations merely
+  // because the upstream family is grouped as a serif or sans serif.
+  if(!f.manual && !f.roleUses){
+    if(/\b(not text|symbols|dingbats|emoji)\b/i.test([f.n,...(f.labels?.keywords || [])].join(' ')))return [];
+    if(['display','script'].includes(f.c) || /\b(display|headline|poster)\b/i.test(f.n) || (f.a || []).some(a=>['blackletter','inline','shaded','stencil','pixel'].includes(a)))return ['heading'];
+  }
+  const out=[];
+  if(uses.some(u=>['headlines','posters','branding','invitations','packaging'].includes(u)))out.push('heading');
+  if(uses.some(u=>['body','longform','ui','code'].includes(u)))out.push('body');
+  return out;
+}
+function roleLabel(f) {
+  const roles=fontRoles(f);
+  return roles.length===2?ROLES.both:ROLES[roles[0] || 'unspecified'];
+}
 function fontWidths(f) {
   const axes=f.axes || [];
   const axis=Array.isArray(axes)?axes.find(a=>a.tag==='wdth'):axes.wdth;
@@ -433,6 +461,8 @@ const WRITING_LABELS={'latin':'Latin','latin-ext':'Latin extended','cyrillic-ext
 const writingLabel=k=>WRITING_LABELS[k] || k.split('-').map(w=>w[0].toUpperCase()+w.slice(1)).join(' ');
 const WRITINGS=Object.fromEntries([...new Set(F.flatMap(f=>f.subsets || []))].filter(k=>k!=='menu').map(k=>[k,writingLabel(k)]).sort((a,b)=>a[1].localeCompare(b[1])));
 function matches(f, set, k) {
+  if (set === 'thickness') return fontSupportsWeight(f,Number(k));
+  if (set === 'role') { const roles=fontRoles(f); return k==='both'?roles.length===2:k==='unspecified'?!roles.length:roles.includes(k); }
   if (set === 'category') return k==='serif' ? ['serif','slab'].includes(f.c) : k==='slab' ? f.c==='slab' || f.s.includes('serif:slab') : f.c===k;
   if (set === 'width') return (f.widths || fontWidths(f)).includes(k);
   if (set === 'writing') return (f.subsets || []).includes(k);
@@ -453,7 +483,7 @@ const autoBlurb = f => {
   const uses = f.u.slice(0, 2).map(u => USES[u].toLowerCase());
   return `${art} ${k} typeface${by}${pub}.${uses.length ? ` Suited to ${uses.join(' and ')}.` : ''}`;
 };
-F.forEach(f => { f.widths=fontWidths(f); if (!f.b) f.b = autoBlurb(f); f.hay = [f.n, f.d, f.p, f.b, ...(f.subsets || []), ...(f.labels?.keywords || []),f.tags||'',f.manual?'external imported manually added licence unverified local':'', CLS[f.c], kindLabel(f), ...f.s.map(x => SUBS[x]), ...f.a.map(x => APPEAR[x] || x), ...f.u.map(x => USES[x]), ...f.t.map(x => THEMES[x])].join(' ').toLowerCase(); });
+F.forEach(f => { f.widths=fontWidths(f); if (!f.b) f.b = autoBlurb(f); f.hay = [f.n, f.d, f.p, f.b, ...(f.subsets || []), ...(f.labels?.keywords || []),f.tags||'',f.manual?'external imported manually added licence unverified local':'', CLS[f.c], kindLabel(f), roleLabel(f), ...f.s.map(x => SUBS[x]), ...f.a.map(x => APPEAR[x] || x), ...f.u.map(x => USES[x]), ...f.t.map(x => THEMES[x])].join(' ').toLowerCase(); });
 function syncLocalRegistry(){
  const records=desktop.enabled?desktop.localFonts():window.OpenShelfLocal.records();
  F.filter(f=>f.manual).forEach(f=>{delete BY[f.slug];});
@@ -528,7 +558,7 @@ const store = {
 };
 
 /* ---------- state ---------- */
-const DEFAULT_RAND = { hCls:['serif','sans','display','slab'], bCls:['sans','serif'], theme:'', textOnly:true, contrast:true, varOnly:false, from:'' };
+const DEFAULT_RAND = { hCls:['serif','sans','display','slab'], bCls:['sans','serif'], theme:'', contrast:true, varOnly:false, from:'' };
 const savedUI=store.get('uiPreferences',{});
 const ENABLED_ID='openshelf-enabled';
 const enabledCollection={id:ENABLED_ID,name:'Enabled',fonts:[],pairs:[],fixed:true,smart:true,preview:cleanCollectionPreview(store.get('enabledPreview',null)),marker:{color:'green',icon:'circle'}};
@@ -536,7 +566,7 @@ function allCollections(){if(!desktop.enabled)return state.cols;enabledCollectio
 const state = {
   text: store.get('text', ''), size: store.get('size', 48), layout: store.get('layout', 'list'),
   collectionLayout:store.get('collectionLayout','list'), collectionCols:store.get('collectionCols','2'), collectionProofOpen:store.get('collectionProofOpen',false), markerMenu:null,
-  gridCols:store.get('gridCols', '2'), limit:48, enabledOnly:desktop.enabled&&!!savedUI.enabledOnly, sort:savedUI.sort||'az', q:savedUI.q||'', f:{category:new Set(), width:new Set(), writing:new Set(), source:new Set(), feel:new Set(), app:new Set(), serif:new Set(), sans:new Set(), calli:new Set(), use:new Set(), tech:new Set()}, fmode: store.get('fmode', {}), col:savedUI.col||null,
+  gridCols:store.get('gridCols', '2'), limit:48, enabledOnly:desktop.enabled&&!!savedUI.enabledOnly, sort:savedUI.sort||'az', q:savedUI.q||'', f:{role:new Set(),thickness:new Set(),category:new Set(), width:new Set(), writing:new Set(), source:new Set(), feel:new Set(), app:new Set(), serif:new Set(), sans:new Set(), calli:new Set(), use:new Set(), tech:new Set()}, fmode: store.get('fmode', {}), col:savedUI.col||null,
   prov:savedUI.prov||'', mood:savedUI.mood||'',
   pair: store.get('pair', {h:'instrument-serif', b:'inter'}),
   locks:{h:false, b:false}, history:[],
@@ -757,10 +787,10 @@ function buildPanel() {
       </div>
       ${sec.select ? `<label class="fwriting-label" for="writing-filter">Supported writing system</label><select class="sel" id="writing-filter"><option value="">All writing systems</option>${Object.entries(WRITINGS).map(([k,l])=>`<option value="${esc(k)}">${esc(l)}</option>`).join('')}</select><p class="fsection-note">Based on the catalog’s character coverage. Coverage for external imports is not yet available.</p>` : `<div class="fchips ${['category','width'].includes(sec.set)?'fchips-tiles':''}">${Object.entries(sec.opts).map(([k,l])=>{
         if(sec.set!=='source' && !F.some(f=>matches(f,sec.set,k)))return '';
-        const rep=sec.set==='category'?({sans:'inter',serif:'source-serif-4',slab:'roboto-slab',mono:'jetbrains-mono',display:'abril-fatface',script:'dancing-script'})[k]:sec.set==='width'?null:REP[k];
+        const rep=sec.set==='thickness' || sec.set==='role'?null:sec.set==='category'?({sans:'inter',serif:'source-serif-4',slab:'roboto-slab',mono:'jetbrains-mono',display:'abril-fatface',script:'dancing-script'})[k]:sec.set==='width'?null:REP[k];
         const r=BY[rep];
         const ag=sec.set==='width'?`<span class="width-sample width-${k}" aria-hidden="true">${k==='adjustable'?'↔':k==='unspecified'?'?':'Aa'}</span>`:r?`<span class="fag" data-filter-sample="${r.slug}" aria-hidden="true" style="font-family:${fam(r)};font-weight:${pvWeight(r)}">${k==='code'?'{ }':'Ag'}</span>`:'';
-        return `<button class="fchip" data-action="fchip" data-set="${sec.set}" data-val="${k}" aria-pressed="false">${ag}<span class="fchip-label">${esc(l)}</span><span class="c"></span></button>`;
+        return `<button class="fchip" data-action="fchip" data-set="${sec.set}" data-val="${k}" aria-pressed="false">${sec.set==='thickness'?`<span class="thickness-sample" style="--stroke:${Math.max(1,Number(k)/100)}px" aria-hidden="true"></span>`:ag}<span class="fchip-label">${esc(l)}</span><span class="c"></span></button>`;
       }).join('')}</div>`}
       ${sec.note?`<p class="fsection-note">${sec.note}</p>`:''}
     </details>`).join('')}
@@ -823,7 +853,7 @@ function fontCard(f) {
   el.innerHTML = `
     <div class="font-head">
       <a class="font-name" href="#/font/${f.slug}">${esc(f.n)}</a>
-      ${f.manual?'<span class="manual-badge spaced-meta"><span>External import</span><span>Licence unverified</span></span>':''}<span class="meta m1">${esc(f.d)}</span><span class="meta">${kindLabel(f)}</span><span class="meta">${styles(f)}</span>${f.y ? `<span class="meta">${f.y}</span>` : ''}${state.weight && !(state.card[f.slug] && state.card[f.slug].w) && libW(f) !== state.weight ? `<span class="meta" title="${esc(f.n)} doesn't come in ${state.weight}">Shown at ${libW(f)}</span>` : ''}<span class="meta" data-noital="${f.slug}" ${f.noItal && libI(f) ? '' : 'hidden'}>No true italic</span>
+      ${f.manual?'<span class="manual-badge spaced-meta"><span>External import</span><span>Licence unverified</span></span>':''}<span class="meta m1">${esc(f.d)}</span><span class="meta">${kindLabel(f)}</span><span class="meta">${styles(f)}</span><span class="usage-badge" title="Recommended use">${roleLabel(f)}</span>${f.y ? `<span class="meta">${f.y}</span>` : ''}${state.weight && !(state.card[f.slug] && state.card[f.slug].w) && libW(f) !== state.weight ? `<span class="meta" title="${esc(f.n)} doesn't come in ${state.weight}">Shown at ${libW(f)}</span>` : ''}<span class="meta" data-noital="${f.slug}" ${f.noItal && libI(f) ? '' : 'hidden'}>No true italic</span>
       <div class="font-acts"><div class="font-style-controls">
         <select class="mini" data-card="w" data-slug="${f.slug}" aria-label="Weight for ${esc(f.n)}" ${f.w.length === 1 ? 'disabled' : ''}>${f.w.map(w => `<option value="${w}" ${w === libW(f) ? 'selected' : ''}>${w} ${WNAME[w] || ""}</option>`).join('')}</select>
         <button class="ib ibt" data-action="cardi" data-slug="${f.slug}" aria-pressed="${libI(f)}" aria-label="Italic for ${esc(f.n)}" title="Italic"><i>I</i></button></div><div class="font-save-controls">
@@ -1222,6 +1252,7 @@ function renderFont(f) {
           <dt>Publisher</dt><dd>${esc(f.p)}</dd>
           ${f.y ? `<dt>Added to catalog</dt><dd>${f.y}</dd>` : ''}
           <dt>Classification</dt><dd>${kindLabel(f)}</dd>
+          <dt>Recommended use</dt><dd>${roleLabel(f)}<small class="role-advice">An editorial starting point. Test at your intended size and weight.</small></dd>
           <dt>Styles</dt><dd>${f.v ? 'Variable, weights ' + f.w[0] + ' to ' + f.w[f.w.length - 1] : f.w.map(w => WNAME[w]).join(', ')}</dd>
           <dt>Licence</dt><dd>${f.manual?'<span class="manual-badge spaced-meta"><span>External import</span><span>Licence unverified</span></span> Verify usage rights yourself. This font may not be open-source.':''}<a ${f.manual?'hidden':''} href="${f.licenseUrl || (/Apache/.test(f.lic) && !/OFL/.test(f.lic) ? 'https://www.apache.org/licenses/LICENSE-2.0' : /Ubuntu/.test(f.lic) ? 'https://ubuntu.com/legal/font-licence' : 'https://openfontlicense.org')}" target="_blank" rel="noopener">${esc(f.lic)}</a></dd>
           ${!f.manual?`<dt>Install</dt><dd><code>npm i @fontsource/${f.fontsourceId || f.slug}</code></dd>`:''}
@@ -1250,18 +1281,17 @@ function renderFont(f) {
 function fontOptions(sel) {
   return Object.entries(CLS).map(([k, l]) => `<optgroup label="${esc(l)}">${F.filter(f => f.c === k && available(f)).sort((a, b) => a.n.localeCompare(b.n)).map(f => `<option value="${f.slug}" ${f.slug === sel ? 'selected' : ''}>${esc(f.n)}</option>`).join('')}</optgroup>`).join('');
 }
-const textOK = f => f.u.some(u => u === 'body' || u === 'longform' || u === 'ui');
 function randomPair() {
   const o = state.rand;
   let pool = F.filter(available);
   if (o.from) { const c = getCol(o.from); if (c) { const s = new Set([...c.fonts, ...c.pairs.flatMap(p => [p.h, p.b])]); pool = F.filter(f => available(f) && s.has(f.slug)); } }
   if (o.varOnly) pool = pool.filter(f => f.v);
-  const H = state.locks.h ? [BY[state.pair.h]] : pool.filter(f => o.hCls.includes(f.c) && (!o.theme || f.t.includes(o.theme)));
-  const B = state.locks.b ? [BY[state.pair.b]] : pool.filter(f => o.bCls.includes(f.c) && (!o.textOnly || textOK(f)));
+  const H = (state.locks.h ? [BY[state.pair.h]] : pool.filter(f => o.hCls.includes(f.c) && (!o.theme || f.t.includes(o.theme)))).filter(f=>f && available(f) && fontRoles(f).includes('heading'));
+  const B = (state.locks.b ? [BY[state.pair.b]] : pool.filter(f => o.bCls.includes(f.c))).filter(f=>f && available(f) && fontRoles(f).includes('body'));
   let chosen = null, count = 0;
   // Reservoir sampling keeps memory constant as the catalog grows.
   for (const h of H) for (const b of B) {
-    if (!available(h) || !available(b) || h === b || (o.contrast && h.c === b.c)) continue;
+    if (h === b || (o.contrast && h.c === b.c)) continue;
     if (h.slug === state.pair.h && b.slug === state.pair.b) continue;
     if (Math.random() < 1 / ++count) chosen = {h:h.slug,b:b.slug};
   }
@@ -1269,7 +1299,7 @@ function randomPair() {
 }
 function doRandomise() {
   const r = randomPair();
-  if (!r) { toast('No combinations match these options. Loosen a setting and try again.'); return; }
+  if (!r) { toast('No suitable heading/body combination matches. Adjust the options or unlock a font and try again.'); return; }
   state.history.push(clonePair(state.pair)); if (state.history.length > 30) state.history.shift();
   const old = state.pair;
   state.pair = normPS({h:r.h, b:r.b, hs: state.locks.h ? old.hs : Object.assign({}, old.hs, {w:0, i:false}), bs: state.locks.b ? old.bs : Object.assign({}, old.bs, {w:0, i:false})});
@@ -1308,7 +1338,7 @@ function renderBuilder() {
   const pr = state.pair; const {h, b, p} = builderWeights();
   if (!$('#b-ph')) return;
   $('#ph').value = h.slug; $('#pb').value = b.slug;
-  $('#b-names').innerHTML = `<span>Heading <a href="#/font/${h.slug}">${esc(h.n)}</a></span><span>Body <a href="#/font/${b.slug}">${esc(b.n)}</a></span>${p.prov ? `<span>${PROV[p.prov]}</span>` : ''}`;
+  $('#b-names').innerHTML = `<span>Heading <a href="#/font/${h.slug}">${esc(h.n)}</a><span class="usage-badge">${roleLabel(h)}</span></span><span>Body <a href="#/font/${b.slug}">${esc(b.n)}</a><span class="usage-badge">${roleLabel(b)}</span></span>${p.prov ? `<span>${PROV[p.prov]}</span>` : ''}`;
   $$('[data-action="lock"]').forEach(x => { const on = state.locks[x.dataset.which]; x.setAttribute('aria-pressed', String(on)); x.innerHTML = on ? ICON.lock : ICON.unlock; x.title = on ? 'Locked for randomising' : 'Lock for randomising'; });
   const u = $('[data-action="undo"]'); if (u) u.disabled = !state.history.length;
   renderAdjust(); applyBuilderStyles();
@@ -1323,7 +1353,7 @@ function renderRandOpts() {
       <h5 style="margin-top:16px">Pick from</h5><select class="sel" data-rand="from" style="width:100%"><option value="">The whole library</option>${allCollections().map(c => `<option value="${c.id}" ${o.from === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
     <div><h5>Rules</h5>
       <label class="chk"><input type="checkbox" data-rand="contrast" ${o.contrast ? 'checked' : ''}> Mix styles (no two sans, no two serifs)</label>
-      <label class="chk"><input type="checkbox" data-rand="textOnly" ${o.textOnly ? 'checked' : ''}> Body font must suit running text</label>
+      <p class="rand-role-note">Always matches heading and body recommendations. Flexible fonts can fill either role.</p>
       <label class="chk"><input type="checkbox" data-rand="varOnly" ${o.varOnly ? 'checked' : ''}> Variable fonts only</label>
       <button type="button" class="linkbtn" data-action="randreset" style="margin-top:10px">Reset options</button></div>
   </div>`;
@@ -1357,7 +1387,7 @@ function renderPairings() {
     <div class="pfilters">
       <div class="ptitle"><h2>Recommended pairings</h2><p class="pguide">Most professional advice comes down to one idea: contrast in one way (serif against sans, weight or width) and agree in others (x-height, proportions, historical era). Families designed together are the safest choice.</p></div>
       <div class="seg" id="prov-seg" role="group" aria-label="Filter by origin" style="padding:2px">
-        ${[['', 'All'], ...Object.entries(PROV)].map(([k, l]) => `<button data-action="prov" data-val="${k}" aria-pressed="${state.prov === k}" style="width:auto;padding:0 14px;font-size:13px">${l}</button>`).join('')}
+        ${[['', 'All'], ...Object.entries(PROV)].map(([k, l]) => `<button data-action="prov" data-val="${k}" aria-pressed="${state.prov === k}" >${l}</button>`).join('')}
       </div>
       <label class="sr" for="mood">Mood</label>
       <select id="mood" class="sel"><option value="">Any mood</option>${Object.entries(MOODS).map(([k, l]) => `<option value="${k}" ${state.mood === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
@@ -1538,7 +1568,14 @@ document.addEventListener('click', e => {
     case 'export-all': download('open-shelf-collections.json', JSON.stringify(exportObj(state.cols), null, 2)); break;
     case 'copy-all': copyText(JSON.stringify(exportObj(state.cols), null, 2), 'All collections copied as JSON'); break;
     case 'openpair': { state.history.push(clonePair(state.pair)); const sc = t.dataset.col && getCol(t.dataset.col); const sp = sc && sc.pairs[+t.dataset.idx]; state.pair = normPS(sp && sp.h === t.dataset.h && sp.b === t.dataset.b ? sp : {h:t.dataset.h, b:t.dataset.b}); } store.set('pair', state.pair); closeDrawer(); gotoPairings(); break;
-    case 'randfor': state.locks = {h:true, b:false}; state.history.push(clonePair(state.pair)); state.pair = normPS({h:t.dataset.slug, b:state.pair.b === t.dataset.slug ? 'inter' : state.pair.b}); store.set('pair', state.pair); location.hash = '#/pairings'; setTimeout(doRandomise, 0); break;
+    case 'randfor': {
+      const f=BY[t.dataset.slug],roles=fontRoles(f);
+      if(!roles.length){toast('Add a heading or body use before finding a random partner.');break;}
+      const side=roles.includes('heading')?'h':'b';
+      state.locks={h:side==='h',b:side==='b'};state.history.push(clonePair(state.pair));
+      state.pair=normPS({...state.pair,[side]:f.slug});store.set('pair',state.pair);
+      location.hash='#/pairings';setTimeout(doRandomise,0);break;
+    }
     case 'swap': state.history.push(clonePair(state.pair)); state.pair = normPS({h:state.pair.b, b:state.pair.h, hs:Object.assign({}, state.pair.hs, {w:0, i:false}), bs:Object.assign({}, state.pair.bs, {w:0, i:false})}); renderBuilder(); break;
     case 'adj-toggle': { const [sd, k] = t.dataset.k.split('.'); state.pair[sd][k] = !state.pair[sd][k]; renderBuilder(); break; }
     case 'adj-reset': state.pair = normPS({h:state.pair.h, b:state.pair.b}); renderBuilder(); break;

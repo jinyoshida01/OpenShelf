@@ -1,9 +1,9 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const source=fs.readFileSync('app.js','utf8');
 const extract=(start,end)=>source.slice(source.indexOf(start),source.indexOf(end,source.indexOf(start)));
-const ctx={state:{f:{category:new Set(),width:new Set(),source:new Set(),writing:new Set(),tech:new Set()},fmode:{},q:'',enabledOnly:false},available:f=>!f.unavailable,desktop:{isEnabled:f=>!!f.enabled}};
+const ctx={state:{f:{role:new Set(),thickness:new Set(),category:new Set(),width:new Set(),source:new Set(),writing:new Set(),tech:new Set()},fmode:{},q:'',enabledOnly:false},available:f=>!f.unavailable,desktop:{isEnabled:f=>!!f.enabled}};
 vm.createContext(ctx);
-vm.runInContext(extract('function fontWidths(', 'const WRITING_LABELS')+extract('function matches(', 'const autoBlurb')+extract('function passes(', 'function syncPanel'),ctx);
+vm.runInContext(extract('function fontSupportsWeight(', 'const WRITING_LABELS')+extract('function matches(', 'const autoBlurb')+extract('function passes(', 'function syncPanel'),ctx);
 const font=(values={})=>({n:'Example',c:'sans',source:'google',a:[],s:[],t:[],u:[],subsets:['latin'],w:[400],hay:'example',...values});
 const widths=f=>Array.from(ctx.fontWidths(f));
 assert.deepEqual(widths(font()),['unspecified']);
@@ -44,3 +44,33 @@ assert(widths(catalog.find(f=>f.n==='Roboto Flex')).includes('adjustable'));
 assert(widths(catalog.find(f=>f.n==='Roboto Condensed')).includes('condensed'));
 assert(widths(catalog.find(f=>f.n==='Inter')).includes('unspecified'));
 console.log('Filters: catalog widths, missing metadata, writing systems, any/all combinations, facet counts, availability and enabled-only passed.');
+
+assert.equal(ctx.fontSupportsWeight(font({w:[400,700]}),700),true);
+assert.equal(ctx.fontSupportsWeight(font({w:[400,700]}),500),false);
+assert.equal(ctx.fontSupportsWeight(font({axes:[{tag:'wght',min:350,max:750}],w:[400]}),600),true);
+assert.equal(ctx.fontSupportsWeight(font({axes:{wght:{min:350,max:750}}}),800),false);
+assert.equal(ctx.matches(font({w:[400,700]}),'thickness','700'),true);
+assert.equal(ctx.matches(font({u:['body','headlines']}),'role','both'),true);
+assert.deepEqual(Array.from(ctx.fontRoles(font({n:'Example Display',u:['headlines','body']}))),['heading']);
+assert.deepEqual(Array.from(ctx.fontRoles(font({c:'script',u:['body','headlines']}))),['heading']);
+assert.deepEqual(Array.from(ctx.fontRoles(font({n:'Symbols',u:['body','headlines']}))),[]);
+assert.deepEqual(Array.from(ctx.fontRoles(font({roleUses:['headlines'],u:['headlines','body']}))),['heading']);
+assert.deepEqual(Array.from(ctx.fontRoles(font({roleUses:['body'],u:['headlines','body']}))),['body']);
+assert.deepEqual(Array.from(ctx.fontRoles(font({manual:true,u:[]}))),[]);
+assert.deepEqual(Array.from(ctx.fontRoles(font({manual:true,c:'display',u:['body','headlines']}))),['heading','body']);
+ctx.F=[font({slug:'heading',c:'display',u:['headlines']}),font({slug:'body',c:'serif',u:['body']}),font({slug:'both',u:['headlines','body']}),font({slug:'unknown',manual:true}),font({slug:'missing',u:['body'],unavailable:true})];
+ctx.BY=Object.fromEntries(ctx.F.map(f=>[f.slug,f]));
+ctx.getCol=()=>({fonts:['heading'],pairs:[]});
+ctx.state={rand:{hCls:['sans','serif','display'],bCls:['sans','serif','display'],textOnly:false,contrast:false},locks:{h:false,b:false},pair:{h:'old',b:'old'}};
+vm.runInContext(extract('function randomPair()', 'function doRandomise()'),ctx);
+for(let i=0;i<100;i++){
+ const pair=ctx.randomPair();assert(pair);
+ assert(ctx.fontRoles(ctx.BY[pair.h]).includes('heading'));
+ assert(ctx.fontRoles(ctx.BY[pair.b]).includes('body'));
+ assert.notEqual(pair.h,pair.b);
+}
+ctx.state.locks={h:true,b:false};ctx.state.pair.h='body';assert.equal(ctx.randomPair(),null,'Body-only locked as heading cannot bypass role rules');
+ctx.state.locks={h:false,b:true};ctx.state.pair.b='heading';assert.equal(ctx.randomPair(),null,'Heading-only locked as body cannot bypass role rules');
+ctx.state.pair.b='both';assert(ctx.randomPair(),'Flexible locked font is valid');
+ctx.state.locks={h:false,b:false};ctx.state.rand.from='heading-only';assert.equal(ctx.randomPair(),null,'No unsuitable fallback when a collection has no body font');
+console.log('Thickness, heading/body recommendations, randomiser roles, locks and empty pools passed.');
