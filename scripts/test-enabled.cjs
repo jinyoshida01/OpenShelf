@@ -1,0 +1,15 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('app.js','utf8');
+const collectionFunction=source.match(/function allCollections\(\)\{[^\n]+\}/)[0];
+const context={desktop:{enabled:true,isEnabled:f=>context.active.has(f.slug)},active:new Set(),F:[{slug:'a'},{slug:'b'}],state:{cols:[{id:'favs'},{id:'project'}]},enabledCollection:{id:'openshelf-enabled',fonts:[],pairs:[],fixed:true,smart:true}};
+vm.createContext(context);vm.runInContext(collectionFunction,context);
+const snapshot=JSON.stringify(context.state.cols);
+assert.equal(context.allCollections().at(-1).id,'openshelf-enabled');
+assert.equal(context.allCollections().at(-1).fonts.length,0);
+context.active.add('b');assert.equal(context.allCollections().at(-1).fonts.join(','),'b');
+context.active.add('a');assert.equal(context.allCollections().at(-1).fonts.join(','),'a,b');
+context.active.delete('b');assert.equal(context.allCollections().at(-1).fonts.join(','),'a');
+context.state.cols.push({id:'later'});assert.equal(context.allCollections().at(-1).id,'openshelf-enabled');
+context.state.cols.pop();assert.equal(JSON.stringify(context.state.cols),snapshot);
+context.desktop.enabled=false;assert.equal(context.allCollections().length,2);
+console.log('Enabled collection: membership, removal, permanent final position, and saved collections isolation passed.');

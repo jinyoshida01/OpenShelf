@@ -501,10 +501,13 @@ const store = {
 /* ---------- state ---------- */
 const DEFAULT_RAND = { hCls:['serif','sans','display','slab'], bCls:['sans','serif'], theme:'', textOnly:true, contrast:true, varOnly:false, from:'' };
 const savedUI=store.get('uiPreferences',{});
+const ENABLED_ID='openshelf-enabled';
+const enabledCollection={id:ENABLED_ID,name:'Enabled',fonts:[],pairs:[],fixed:true,smart:true,preview:cleanCollectionPreview(store.get('enabledPreview',null)),marker:{color:'green',icon:'circle'}};
+function allCollections(){if(!desktop.enabled)return state.cols;enabledCollection.fonts=F.filter(f=>desktop.isEnabled(f)).map(f=>f.slug);return [...state.cols,enabledCollection];}
 const state = {
   text: store.get('text', ''), size: store.get('size', 48), layout: store.get('layout', 'list'),
   collectionLayout:store.get('collectionLayout','list'), collectionCols:store.get('collectionCols','2'), collectionProofOpen:store.get('collectionProofOpen',false), markerMenu:null,
-  gridCols:store.get('gridCols', '2'), limit:48, sort:savedUI.sort||'az', q:savedUI.q||'', f:{source:new Set(), feel:new Set(), app:new Set(), serif:new Set(), sans:new Set(), calli:new Set(), use:new Set(), tech:new Set()}, fmode: store.get('fmode', {}), col:savedUI.col||null,
+  gridCols:store.get('gridCols', '2'), limit:48, enabledOnly:desktop.enabled&&!!savedUI.enabledOnly, sort:savedUI.sort||'az', q:savedUI.q||'', f:{source:new Set(), feel:new Set(), app:new Set(), serif:new Set(), sans:new Set(), calli:new Set(), use:new Set(), tech:new Set()}, fmode: store.get('fmode', {}), col:savedUI.col||null,
   prov:savedUI.prov||'', mood:savedUI.mood||'',
   pair: store.get('pair', {h:'instrument-serif', b:'inter'}),
   locks:{h:false, b:false}, history:[],
@@ -530,9 +533,9 @@ function normaliseCols() {
   });
 }
 normaliseCols();
-if(state.col&&!state.cols.some(c=>c.id===state.col))state.col=null;
+if(state.col!==ENABLED_ID&&state.col&&!state.cols.some(c=>c.id===state.col))state.col=null;
 for(const [key,values] of Object.entries(savedUI.filters||{}))if(state.f[key]&&Array.isArray(values))state.f[key]=new Set(values);
-function persistUI(){store.set('uiPreferences',{sort:state.sort,q:state.q,col:state.col,prov:state.prov,mood:state.mood,card:state.card,exactW:state.exactW,filters:Object.fromEntries(Object.entries(state.f).map(([k,v])=>[k,[...v]]))});store.set('openCollections',[...state.open]);store.set('collectionProofOpen',state.collectionProofOpen);}
+function persistUI(){store.set('uiPreferences',{enabledOnly:state.enabledOnly,sort:state.sort,q:state.q,col:state.col,prov:state.prov,mood:state.mood,card:state.card,exactW:state.exactW,filters:Object.fromEntries(Object.entries(state.f).map(([k,v])=>[k,[...v]]))});store.set('openCollections',[...state.open]);store.set('collectionProofOpen',state.collectionProofOpen);}
 window.addEventListener('pagehide',persistUI);document.addEventListener('visibilitychange',()=>{if(document.hidden)persistUI();});
 let preferenceTimer;for(const event of ['click','input','change'])document.addEventListener(event,()=>{clearTimeout(preferenceTimer);preferenceTimer=setTimeout(persistUI,250);});
 state.collectionLayout=state.collectionLayout==='grid'?'grid':'list';
@@ -546,8 +549,8 @@ function normPS(pr) { return {h:pr.h, b:pr.b, hs:Object.assign({}, HS_DEF, clean
 const clonePair = pr => JSON.parse(JSON.stringify(normPS(pr)));
 const isDefaultStyle = pr => JSON.stringify(normPS(pr).hs) === JSON.stringify(HS_DEF) && JSON.stringify(normPS(pr).bs) === JSON.stringify(BS_DEF);
 state.pair = normPS(state.pair);
-const saveCols = () => { store.set('cols', state.cols); updateColCount(); };
-const getCol = id => state.cols.find(c => c.id === id);
+const saveCols = () => { store.set('enabledPreview',enabledCollection.preview);store.set('cols', state.cols); updateColCount(); };
+const getCol = id => id===ENABLED_ID?allCollections().find(c=>c.id===id):state.cols.find(c=>c.id===id);
 const isFav = slug => getCol('favs').fonts.includes(slug);
 
 /* ---------- motion ---------- */
@@ -729,7 +732,7 @@ function buildPanel() {
 }
 function filterCtx() { return { q: state.q.trim().toLowerCase(), col: state.col ? getCol(state.col) : null }; }
 function passes(f, ctx, extra) {
-  if (!available(f)) return false;
+  if (!available(f)||(state.enabledOnly&&!desktop.isEnabled(f))) return false;
   for (const set in state.f) {
     let sel = state.f[set];
     if (extra && extra.set === set) { sel = new Set(extra.only ? [] : sel); sel.add(extra.k); }
@@ -843,7 +846,7 @@ function anchorLib() {
   if (scrollY > target) window.scrollTo(0, target);
 }
 function refilter() { state.limit = 48; renderLibrary(); anchorLib(); }
-function clearFilters() { Object.values(state.f).forEach(x => x.clear()); state.col = null; state.q = ''; state.exactW = false; }
+function clearFilters() { state.enabledOnly=false;$('.enabled-only')?.setAttribute('aria-pressed','false');Object.values(state.f).forEach(x => x.clear()); state.col = null; state.q = ''; state.exactW = false; }
 function reshuffle() { F.forEach(f => { state.shuffle[f.slug] = Math.random(); }); }
 
 /* ---------- popover ---------- */
@@ -1054,10 +1057,10 @@ function collectionContent(scope) {
         <textarea id="${scope}-import-text" data-collection-import placeholder='{"collections":[{"name":"Brand refresh","fonts":["Inter"],"pairs":[{"heading":"Fraunces","body":"Inter"}]}]}' aria-label="Paste collection JSON"></textarea>
         <div class="row"><button class="btn sm primary" data-action="import-paste">Import pasted JSON</button><button class="btn sm" data-action="import-file">Choose file</button><button class="btn sm quiet" data-action="import-toggle">Cancel</button></div>
       </div>` : ''}
-      <div class="dr-list" data-folder-layout="${state.collectionLayout}" style="--folder-cols:${state.collectionCols}">${state.cols.map(drawerItem).join('')}</div>`;
+      <div class="dr-list" data-folder-layout="${state.collectionLayout}" style="--folder-cols:${state.collectionCols}">${allCollections().map(drawerItem).join('')}</div>`;
 }
 function renderCollectionsPage() {
-  $('#view-collections').innerHTML = `<header class="page-head"><h1>Collections</h1><p><span class="copy-line">Organise saved fonts and pairings for your projects.</span> <span class="copy-line">These are the same collections as the side panel, saved in this browser.</span></p></header><div class="collections-heading"><p class="count">${plural(state.cols.length, 'collection')} · ${plural(state.cols.reduce((n,c)=>n+c.fonts.length+c.pairs.length,0), 'saved item')}</p></div><div class="collection-manager collections-workspace">${collectionContent('page')}</div>`;
+  $('#view-collections').innerHTML = `<header class="page-head"><h1>Collections</h1><p><span class="copy-line">Organise saved fonts and pairings for your projects.</span> <span class="copy-line">These are the same collections as the side panel, saved in this browser.</span></p></header><div class="collections-heading"><p class="count">${plural(allCollections().length, 'collection')} · ${plural(state.cols.reduce((n,c)=>n+c.fonts.length+c.pairs.length,0), 'saved item')}</p></div><div class="collection-manager collections-workspace">${collectionContent('page')}</div>`;
 }
 const collectionObserver='IntersectionObserver'in window?new IntersectionObserver(entries=>{for(const e of entries)if(e.isIntersecting){loadFont(BY[e.target.dataset.font],[Number(e.target.style.fontWeight)||400]);collectionObserver.unobserve(e.target);}},{rootMargin:'180px'}):null;
 function setDrawerWidth(value){const max=Math.min(800,innerWidth-32),min=Math.min(360,max);const width=Math.max(min,Math.min(max,Number(value)||470));document.documentElement.style.setProperty('--drawer-width',width+'px');const handle=$('.drawer-resize');if(handle){handle.setAttribute('aria-valuenow',Math.round(width));handle.setAttribute('aria-valuemax',max);}return width;}
@@ -1067,24 +1070,38 @@ function setupDrawerResize(){const r=$('.drawer-resize');setDrawerWidth(store.ge
  const end=()=>{if(!r.classList.contains('drag'))return;cancelAnimationFrame(frame);frame=0;store.set('drawerWidth',setDrawerWidth(next||startWidth));r.classList.remove('drag');document.body.classList.remove('resizing');};r.addEventListener('pointerup',end);r.addEventListener('pointercancel',end);
  r.addEventListener('keydown',e=>{let v=$('#drawer').getBoundingClientRect().width;if(e.key==='ArrowLeft')v+=20;else if(e.key==='ArrowRight')v-=20;else if(e.key==='Home')v=360;else if(e.key==='End')v=800;else return;e.preventDefault();store.set('drawerWidth',setDrawerWidth(v));});r.addEventListener('dblclick',()=>store.set('drawerWidth',setDrawerWidth(470)));}
 window.addEventListener('resize',()=>setDrawerWidth(store.get('drawerWidth',470)));
+function observeCollectionFonts(){collectionObserver?.disconnect();$$('.collection-specimen').filter(el=>el.offsetParent).forEach(el=>collectionObserver?collectionObserver.observe(el):loadFont(BY[el.dataset.font]));}
+function toggleCollection(id){
+ const opening=!state.open.has(id);opening?state.open.add(id):state.open.delete(id);
+ $$(`[data-col-card="${CSS.escape(id)}"]`).forEach(card=>{
+  let body=$('.ci-body',card),from=body?.getBoundingClientRect().height||0;
+  body?.getAnimations().forEach(a=>a.cancel());
+  const focused=card.contains(document.activeElement);
+  if(opening&&!body){const box=document.createElement('div');box.innerHTML=drawerItem(getCol(id));const next=box.firstElementChild;card.replaceWith(next);card=next;body=$('.ci-body',card);if(focused)$('.ci-head',card).focus({preventScroll:true});}
+  $('.ci-head',card).setAttribute('aria-expanded',String(opening));
+  if(!body)return;body.inert=!opening;
+  if(opening)updateCollectionPreviews();
+  if(reducedMotion()){if(!opening)body.remove();return;}
+  const to=opening?body.scrollHeight:0;
+  const padding=getComputedStyle(body).paddingBottom;
+  const animation=body.animate([{height:from+'px',paddingBottom:opening&&from===0?'0px':padding,opacity:opening?.2:1},{height:to+'px',paddingBottom:opening?padding:'0px',opacity:opening?1:0}],{duration:320,easing:'cubic-bezier(.22,1,.36,1)',fill:'both'});
+  animation.finished.then(()=>{if(!opening&&!state.open.has(id))body.remove();animation.cancel();}).catch(()=>{});
+ });
+ updateCollectionPreviews();observeCollectionFonts();
+}
 function renderDrawer() {
   const active=document.activeElement, scope=active?.closest('#drawer')?'#drawer':'#view-collections';
   let focusSelector='';
   if(active?.matches('[data-action="collection-layout"],[data-action="ci-toggle"],[data-action="marker-open"],[data-action="marker-set"]'))focusSelector=['data-action','data-id','data-layout-value','data-marker-kind','data-value'].filter(k=>active.hasAttribute(k)).map(k=>`[${k}="${CSS.escape(active.getAttribute(k))}"]`).join('');
   if(active?.matches('[data-collection-columns]'))focusSelector='[data-collection-columns]';
-  const previousHeights=new Map($$('[data-col-card]').filter(el=>el.offsetParent).map(el=>[(el.closest('#drawer')?'drawer:':'page:')+el.dataset.colCard,el.getBoundingClientRect().height]));
   const d = $('#drawer');
   const pageActive = !drawerOpen() && !$('#view-collections').hidden;
   const scroll = $('.dr-body', d) ? $('.dr-body', d).scrollTop : 0;
   d.innerHTML = `<div class="drawer-resize" role="separator" tabindex="0" aria-label="Resize collections panel" aria-orientation="vertical" aria-valuemin="360" aria-valuemax="800"></div><div class="dr-head"><h2>Collections</h2><button class="ib" data-action="drawer-close" aria-label="Close collections">${ICON.x}</button></div><div class="dr-body collection-manager"><a class="drawer-page-link" href="#/collections">View all collections →</a>${collectionContent('drawer')}</div>`;
   if (!$('#view-collections').hidden) renderCollectionsPage();
-  collectionObserver?.disconnect();$$('.collection-specimen').filter(el=>el.offsetParent).forEach(el=>collectionObserver?collectionObserver.observe(el):loadFont(BY[el.dataset.font]));
+  observeCollectionFonts();
   setupDrawerResize();
   updateCollectionPreviews();
-  if (!reducedMotion()) $$('[data-col-card]').filter(el=>el.offsetParent).forEach(el=>{
-    const before=previousHeights.get((el.closest('#drawer')?'drawer:':'page:')+el.dataset.colCard), after=el.getBoundingClientRect().height;
-    if(before && Math.abs(before-after)>1) el.animate([{height:before+'px'},{height:after+'px'}],{duration:280,easing:'cubic-bezier(.22,1,.36,1)'});
-  });
   $('.dr-body', d).scrollTop = scroll;
   if(focusSelector)$(scope+' '+focusSelector)?.focus({preventScroll:true});
   if (state.renaming) { const i = $('[data-form="rename"] input', pageActive ? $('#view-collections') : d); if (i) { i.focus(); i.select(); } }
@@ -1092,13 +1109,13 @@ function renderDrawer() {
 function drawerItem(c) {
   const open = state.open.has(c.id);
   return `<section class="ci" data-col-card="${c.id}" data-collection-layout="${state.collectionLayout}" data-marker-color="${c.marker.color}" style="--collection-cols:${state.collectionCols==='auto'?'auto':state.collectionCols}">
-    <div class="ci-heading"><button class="collection-label-button" data-action="marker-open" data-id="${c.id}" aria-label="Label ${esc(c.name)}" aria-expanded="${state.markerMenu===c.id}" title="Change colour and icon"><span class="collection-label-icon" aria-hidden="true">${COL_ICONS.folder}${!['none','folder'].includes(c.marker.icon)?`<span class="folder-symbol">${COL_ICONS[c.marker.icon]}</span>`:''}</span><span class="collection-label-dot" aria-hidden="true"></span></button><button class="ci-head" data-action="ci-toggle" data-id="${c.id}" aria-expanded="${open}"><span class="ci-name">${esc(c.name)}</span><span class="ci-count">${colSummary(c)}</span>${ICON.chev}</button></div>
+    <div class="ci-heading"><button class="collection-label-button" ${c.smart?'disabled':''} data-action="marker-open" data-id="${c.id}" aria-label="Label ${esc(c.name)}" aria-expanded="${state.markerMenu===c.id}" title="Change colour and icon"><span class="collection-label-icon" aria-hidden="true">${COL_ICONS.folder}${!['none','folder'].includes(c.marker.icon)?`<span class="folder-symbol">${COL_ICONS[c.marker.icon]}</span>`:''}</span><span class="collection-label-dot" aria-hidden="true"></span></button><button class="ci-head" data-action="ci-toggle" data-id="${c.id}" aria-expanded="${open}"><span class="ci-name">${esc(c.name)}</span><span class="ci-count">${colSummary(c)}</span>${ICON.chev}</button></div>
     ${state.markerMenu===c.id?markerPicker(c):''}${desktop.collectionButtons(c)}
     ${open ? `<div class="ci-body">${collectionPreviewControls(c)}
       ${state.renaming === c.id ? `<form class="inline-new" data-form="rename" data-id="${c.id}"><input type="text" value="${esc(c.name)}" aria-label="Collection name" maxlength="60"><button class="btn sm primary" type="submit">Save</button></form>` : ''}
-      ${c.fonts.length ? `<p class="ci-sub">Fonts</p><div class="collection-items">${c.fonts.map(s => { const f = BY[s]; return `<div class="ci-row"><a class="collection-font-link" href="#/font/${s}"><span class="collection-font-label" data-preview-label="${c.id}">${esc(f.n)}</span>${f.manual?'<span class="manual-badge spaced-meta"><span>External import</span><span>Licence unverified</span></span>':''}<span class="collection-specimen" data-col-preview data-col="${c.id}" data-font="${s}" style="font-family:${fam(f)};font-weight:${pvWeight(f)}">${esc(collectionPreviewText(c,f))}</span></a><div class="collection-font-device" data-device-font="${esc(f.slug)}" data-device-name="${esc(f.n)}">${desktop.enabled?desktop.buttons(f,true):!f.manual?`<a class="ib download-button" href="${f.gf}" target="_blank" rel="noopener" aria-label="Download ${esc(f.n)}" title="Download ${esc(f.n)}">${ICON.get}</a>`:''}</div><button class="ib" data-action="ci-rmfont" data-id="${c.id}" data-slug="${s}" aria-label="Remove ${esc(f.n)}" title="Remove">${ICON.x}</button></div>`; }).join('')}</div>` : ''}
+      ${c.fonts.length ? `<p class="ci-sub">Fonts</p><div class="collection-items">${c.fonts.map(s => { const f = BY[s]; return `<div class="ci-row"><a class="collection-font-link" href="#/font/${s}"><span class="collection-font-label" data-preview-label="${c.id}">${esc(f.n)}</span>${f.manual?'<span class="manual-badge spaced-meta"><span>External import</span><span>Licence unverified</span></span>':''}<span class="collection-specimen" data-col-preview data-col="${c.id}" data-font="${s}" style="font-family:${fam(f)};font-weight:${pvWeight(f)}">${esc(collectionPreviewText(c,f))}</span></a><div class="collection-font-device" data-device-font="${esc(f.slug)}" data-device-name="${esc(f.n)}">${desktop.enabled?desktop.buttons(f,true):!f.manual?`<a class="ib download-button" href="${f.gf}" target="_blank" rel="noopener" aria-label="Download ${esc(f.n)}" title="Download ${esc(f.n)}">${ICON.get}</a>`:''}</div>${c.smart?'':`<button class="ib" data-action="ci-rmfont" data-id="${c.id}" data-slug="${s}" aria-label="Remove ${esc(f.n)}" title="Remove">${ICON.x}</button>`}</div>`; }).join('')}</div>` : ''}
       ${c.pairs.length ? `<p class="ci-sub">Pairings</p><div class="collection-items">${c.pairs.map((p, pi) => { const h = BY[p.h], b = BY[p.b]; return `<div class="ci-row"><button class="ci-pair" data-action="openpair" data-col="${c.id}" data-idx="${pi}" data-h="${p.h}" data-b="${p.b}" title="Open in the pairing builder"><span class="collection-font-label" data-preview-label="${c.id}">${esc(h.n)} + ${esc(b.n)}</span>${h.manual||b.manual?'<span class="manual-badge">Includes manually added fonts · verify licences</span>':''}<span class="h collection-specimen" data-col-preview data-col="${c.id}" data-font="${h.slug}" style="font-family:${fam(h)};font-weight:${pairHW(p)}">${esc(collectionPreviewText(c,h))}</span><span class="b collection-specimen" data-col-preview data-col="${c.id}" data-font="${b.slug}" style="font-family:${fam(b)}">${esc(collectionPreviewText(c,b))}</span></button><button class="ib" data-action="ci-rmpair" data-id="${c.id}" data-h="${p.h}" data-b="${p.b}" aria-label="Remove ${esc(h.n)} and ${esc(b.n)} pairing" title="Remove">${ICON.x}</button></div>`; }).join('')}</div>` : ''}
-      ${!c.fonts.length && !c.pairs.length ? `<p class="ci-empty">${c.fixed ? 'Tap the heart on a font, or save a pairing here.' : 'Use the save button on any font or pairing to add it here.'}</p>` : ''}
+      ${!c.fonts.length && !c.pairs.length ? `<p class="ci-empty">${c.smart ? 'Enable a downloaded font or collection to see it here.' : c.fixed ? 'Tap the heart on a font, or save a pairing here.' : 'Use the save button on any font or pairing to add it here.'}</p>` : ''}
       <div class="ci-acts">
         ${c.fonts.length ? `<button class="btn sm" data-action="ci-show" data-id="${c.id}">Show in library</button>` : ''}
         ${c.fonts.length || c.pairs.length ? `<button class="btn sm" data-action="ci-css" data-id="${c.id}">Copy embed code</button><button class="btn sm" data-action="ci-export" data-id="${c.id}">Export</button><button class="btn sm" data-action="ci-share" data-id="${c.id}">${ICON.link} Copy share link</button>` : ''}
@@ -1255,7 +1272,7 @@ function renderRandOpts() {
     <div><h5>Heading styles</h5><div class="minichips">${chips('hCls', o.hCls)}</div></div>
     <div><h5>Body styles</h5><div class="minichips">${chips('bCls', o.bCls)}</div></div>
     <div><h5>Heading feeling</h5><select class="sel" data-rand="theme" style="width:100%"><option value="">Any feeling</option>${FEEL.map(k => [k, THEMES[k]]).map(([k, l]) => `<option value="${k}" ${o.theme === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
-      <h5 style="margin-top:16px">Pick from</h5><select class="sel" data-rand="from" style="width:100%"><option value="">The whole library</option>${state.cols.map(c => `<option value="${c.id}" ${o.from === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
+      <h5 style="margin-top:16px">Pick from</h5><select class="sel" data-rand="from" style="width:100%"><option value="">The whole library</option>${allCollections().map(c => `<option value="${c.id}" ${o.from === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
     <div><h5>Rules</h5>
       <label class="chk"><input type="checkbox" data-rand="contrast" ${o.contrast ? 'checked' : ''}> Mix styles (no two sans, no two serifs)</label>
       <label class="chk"><input type="checkbox" data-rand="textOnly" ${o.textOnly ? 'checked' : ''}> Body font must suit running text</label>
@@ -1322,9 +1339,10 @@ let lastKey = null;
 let pageTransition, routeHash;
 function route() {
   const changed=routeHash!==undefined && routeHash!==location.hash;
+  const articleRoute=[routeHash,location.hash].some(h=>h?.startsWith('#/knowledge'));
   routeHash=location.hash;
   pageTransition?.skipTransition();
-  if (changed && !reducedMotion() && document.startViewTransition) {
+  if (changed && !articleRoute && !reducedMotion() && document.startViewTransition) {
     pageTransition=document.startViewTransition(renderRoute);
     pageTransition.finished.catch(()=>{});
   } else { renderRoute(); if(changed) enterMotion($('main > section:not([hidden])')); }
@@ -1447,10 +1465,11 @@ document.addEventListener('click', e => {
     case 'marker-open': state.markerMenu=state.markerMenu===t.dataset.id?null:t.dataset.id;renderDrawer();break;
     case 'marker-close': state.markerMenu=null;renderDrawer();break;
     case 'marker-set': {const c=getCol(t.dataset.id);c.marker=cleanMarker({...c.marker,[t.dataset.markerKind]:t.dataset.value});saveCols();renderDrawer();break;}
-    case 'preview-all': state.cols.forEach(c => c.preview.mode = 'page'); saveCols(); renderDrawer(); toast('All collections now use the page preview text'); break;
+    case 'preview-all': allCollections().forEach(c => c.preview.mode = 'page'); saveCols(); renderDrawer(); toast('All collections now use the page preview text'); break;
     case 'drawer': drawerOpen() ? closeDrawer() : openDrawer(); break;
     case 'drawer-close': closeDrawer(); break;
-    case 'ci-toggle': { const id = t.dataset.id; state.open.has(id) ? state.open.delete(id) : state.open.add(id); renderDrawer(); break; }
+    case 'ci-toggle': toggleCollection(t.dataset.id);break;
+    case 'enabled-only': state.enabledOnly=!state.enabledOnly;t.setAttribute('aria-pressed',String(state.enabledOnly));state.limit=48;renderLibrary();break;
     case 'ci-rmfont': setFont(t.dataset.id, t.dataset.slug, false); if (t.dataset.id === 'favs') refreshFav(t.dataset.slug); afterColChange(); break;
     case 'ci-rmpair': setPair(t.dataset.id, {h:t.dataset.h, b:t.dataset.b}, false); afterColChange(); break;
     case 'ci-show': clearFilters(); state.col = t.dataset.id; closeDrawer(); if (location.hash === '#/' || location.hash === '') renderLibrary(); else location.hash = '#/'; break;
@@ -1560,12 +1579,13 @@ $('#theme-btn').addEventListener('click', () => { const r = document.documentEle
 
 /* ---------- boot ---------- */
 window.OpenShelfLocal.connect(syncLocalRegistry);
-desktop.connect({toast,collection:getCol,collections:()=>state.cols,refresh:()=>{
+desktop.connect({toast,collection:getCol,collections:()=>state.cols,activationChanged:()=>{allCollections();$$(`[data-col-card="${ENABLED_ID}"]`).forEach(el=>{const y=el.closest('.dr-body')?.scrollTop;el.outerHTML=drawerItem(enabledCollection);if(y!==undefined)$('#drawer .dr-body').scrollTop=y;});observeCollectionFonts();updateCollectionPreviews();if(!$('#view-library').hidden&&(state.enabledOnly||state.col===ENABLED_ID))renderLibrary();},refresh:()=>{
   syncLocalRegistry();loaded.clear();unavailable.clear();$('#font-status').hidden=true;
   const open=drawerOpen();
   if(open){ if(!$('#view-library').hidden)renderLibrary();else if(!$('#view-local').hidden)desktop.showLocal();renderDrawer(); }
   else route();
 }});
+if(desktop.enabled){const b=document.createElement('button');b.className='btn sm enabled-only';b.dataset.action='enabled-only';b.setAttribute('aria-pressed',String(state.enabledOnly));b.textContent='Enabled only';$('#sort').before(b);}
 $('#q').value=state.q;$('#sort').value=state.sort;
 setupProof();
 renderMadeBy();

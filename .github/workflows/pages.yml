@@ -38,6 +38,7 @@ jobs:
           node --check local-fonts.js
           node --check knowledge.js
           node scripts/test-loading.cjs
+          node scripts/test-enabled.cjs
       - name: Save refreshed snapshot
         if: github.event_name != 'push'
         run: |

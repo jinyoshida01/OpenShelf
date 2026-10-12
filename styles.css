@@ -552,3 +552,13 @@ html:not(.desktop-app) .results.grid .font-device-controls{width:auto;margin-lef
 
 /* Keep imported-font provenance and licence status visually separate. */
 .spaced-meta{display:inline-flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px}.spaced-meta>span{white-space:nowrap}.spaced-meta>span+span::before{content:"·";margin-right:12px;color:var(--muted)}.manual-badge.spaced-meta{align-self:flex-start;max-width:100%}
+
+/* Keep folder contents mounted through their closing animation. */
+.ci-body{overflow:hidden;animation:none;overflow-anchor:none}.ci-head svg{transition:transform .32s var(--ease-out)}
+.knowledge-card{content-visibility:auto;contain-intrinsic-size:auto 560px}.knowledge-image img{display:block}
+.enabled-only[aria-pressed=true]{background:var(--hi);color:var(--inv);border-color:var(--hi)}
+.manual-badge.spaced-meta{align-self:center;align-items:center;vertical-align:middle;line-height:1.5}
+.collection-font-link>.manual-badge.spaced-meta{align-self:flex-start}
+.local-card .font-head{align-items:center}.local-card .font-head h2{margin:0;line-height:1.4}
+.local-card .actions{align-items:center}.local-card .actions>.btn,.local-card .actions>.download-button{min-height:32px;display:inline-flex;align-items:center;justify-content:center}.local-card .actions>.font-device-controls{align-items:center}
+.enabled-collection-note{font-size:12px;line-height:1.6;margin:0 0 14px}
