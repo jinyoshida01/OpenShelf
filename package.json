@@ -1,0 +1,12 @@
+{
+  "name": "open-shelf-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "desktop:prepare": "node scripts/desktop/prepare.cjs",
+    "desktop:dev": "npm run desktop:prepare && tauri dev",
+    "desktop:build": "tauri build",
+    "tauri": "tauri"
+  },
+  "devDependencies": {"@tauri-apps/cli": "^2.10.0"}
+}

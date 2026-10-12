@@ -1,10 +1,13 @@
 
-(() => {
+(async () => {
 'use strict';
+const desktop=window.OpenShelfDesktop;
+if (desktop.enabled) { try { await desktop.ready; } catch(e) { document.querySelector('main').textContent='Could not open the desktop library. '+e; return; } }
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const range = (a, b) => { const o = []; for (let w = a; w <= b; w += 100) o.push(w); return o; };
 const GH = 'https://github.com/';
+const SOURCES = {google:'Google Fonts',fontsource:'Fontsource',local:'Manually added'};
 const OFL = 'SIL Open Font License 1.1';
 
 /* ---------- vocabularies ---------- */
@@ -20,6 +23,7 @@ const SUBS = {
 };
 const pick = pre => Object.fromEntries(Object.entries(SUBS).filter(([k]) => k.startsWith(pre)));
 const SECTIONS = [
+  {id:'source', set:'source', title:'Source', opts:SOURCES},
   {id:'feel', set:'feel', title:'Feeling', opts:Object.fromEntries(FEEL.map(k => [k, THEMES[k]]))},
   {id:'app', set:'app', title:'Appearance', opts:APPEAR},
   {id:'serif', set:'serif', title:'Serif', opts:pick('serif:')},
@@ -351,23 +355,29 @@ EXTRA.split('\n').forEach(line => {
 // Current open-source metadata determines membership; editorial annotations enrich it.
 const catalog = window.OPEN_SHELF_CATALOG;
 const editorial = new Map(F.map(f => [f.n, f]));
-F.splice(0, F.length, ...catalog.fonts.map(raw => {
+F.splice(0, F.length, ...[...catalog.fonts, ...(window.OPEN_SHELF_FONTSOURCE?.fonts || [])].map(raw => {
   const prior = editorial.get(raw.n) || {};
   const f = {...prior, ...raw};
+  f.source = raw.source || 'google';
   f.c = prior.c || raw.c;
   f.p = prior.p || raw.d;
   f.u = prior.u || ({sans:['body','ui','headlines'],serif:['body','editorial'],mono:['code','data'],display:['headlines','posters'],script:['branding','invitations']}[f.c] || ['headlines']);
-  f.t = prior.t || [];
-  f.a = prior.a || (raw.color ? ['color'] : []);
-  f.b = prior.b || `${raw.n} by ${raw.d}. Listed in the Google Fonts open-source catalog. Added to Google Fonts in ${raw.y}; this is not necessarily its original release year. Suggested uses are editorial starting points; test the characters and sizes your project needs.`;
+  f.t = [...new Set([...(prior.t || []), ...(raw.labels?.t || [])])];
+  f.a = [...new Set([...(prior.a || []), ...(raw.labels?.a || []), ...(raw.color ? ['color'] : [])])];
+  f.u = [...new Set([...f.u, ...(raw.labels?.u || [])])];
+  f.s = [...new Set([...(prior.s || []), ...(raw.labels?.s || [])])];
+  f.b = prior.b || (f.source === 'fontsource' ? `${raw.n} is available from Fontsource under ${raw.lic}. Attribution: ${raw.d}. Preview it here, or visit the original source for project details and licence terms.` : `${raw.n} by ${raw.d}. Listed in the Google Fonts open-source catalog. Added to Google Fonts in ${raw.y}; this is not necessarily its original release year. Suggested uses are editorial starting points; test the characters and sizes your project needs.`);
   return f;
 }));
 F.forEach(f => {
   f.slug = f.n.toLowerCase().replace(/\s+/g, '-');
-  f.gf = 'https://fonts.google.com/specimen/' + f.n.replace(/ /g, '+');
-  f.fs = 'https://fontsource.org/fonts/' + f.slug;
+  f.fs = 'https://fontsource.org/fonts/' + (f.fontsourceId || f.slug);
+  f.gf = f.source === 'fontsource' ? f.fs : 'https://fonts.google.com/specimen/' + f.n.replace(/ /g, '+');
   f.lic = f.lic || OFL;
 });
+const localRecords=desktop.enabled?desktop.localFonts():await window.OpenShelfLocal.catalog().catch(()=>[]);
+function localFont(r){return {slug:r.id.startsWith('local-')?r.id:'local-'+r.id,n:r.name,c:CLS[r.category]?r.category:'sans',source:'local',manual:true,previewFamily:r.previewFamily||'local_'+r.id,d:r.designer||'Not specified',p:r.publisher||'',b:r.description||'Manually added font. Verify its licence and usage rights; it may not be open-source.',lic:r.license||'Unverified — check your licence',w:[r.weight||400],v:false,noItal:r.style!=='italic',regularStyle:r.style||'normal',u:(r.uses||[]).map(label=>Object.keys(USES).find(k=>USES[k]===label)).filter(Boolean),t:(r.feelings||[]).map(label=>Object.keys(THEMES).find(k=>THEMES[k]===label)).filter(Boolean),s:[],a:[],tags:r.tags||'',subsets:[]};}
+F.push(...localRecords.map(localFont));
 const BY = Object.fromEntries(F.map(f => [f.slug, f]));
 const BYNAME = Object.fromEntries(F.map(f => [f.n.toLowerCase(), f.slug]));
 const SUB = {
@@ -380,7 +390,13 @@ const APP = {
   'montserrat':['wide'],'nunito':['rounded'],'rubik':['rounded'],'chakra-petch':['techno'],'oswald':['condensed'],'playfair-display':['high-contrast'],'cormorant-garamond':['high-contrast'],'dm-serif-display':['high-contrast'],'instrument-serif':['condensed'],'old-standard-tt':['high-contrast'],
   'bebas-neue':['condensed'],'abril-fatface':['high-contrast'],'syne':['wide'],'righteous':['deco'],'anton':['condensed'],'major-mono-display':['mono','techno']
 };
-F.forEach(f => { f.s = f.s || SUB[f.slug] || []; f.a = f.a || APP[f.slug] || []; });
+F.forEach(f => { f.s = [...new Set([...(f.s || []), ...(SUB[f.slug] || [])])]; f.a = [...new Set([...(f.a || []), ...(APP[f.slug] || [])])];
+  if (/\b(condensed|narrow|compressed)\b/i.test(f.n)) f.a.push('condensed');
+  if (/\b(expanded|wide|extended)\b/i.test(f.n)) f.a.push('wide');
+  if (/\bmono\b/i.test(f.n)) { f.a.push('mono'); f.u.push('code','data'); }
+  if (/\bslab\b/i.test(f.n)) f.s.push('serif:slab');
+  if (/\brounded\b/i.test(f.n)) { f.a.push('rounded'); f.t.push('friendly'); }
+});
 const kindLabel = f => {
   if (f.c === 'mono') return 'Monospace';
   if (f.c === 'display') return 'Display';
@@ -391,6 +407,7 @@ const kindLabel = f => {
   return SUBS[k];
 };
 function matches(f, set, k) {
+  if (set === 'source') return f.source === k;
   if (set === 'feel') return f.t.includes(k);
   if (set === 'use') return f.u.includes(k);
   if (set === 'tech') return k === 'variable' ? !!f.v : f.a.includes(k);
@@ -407,8 +424,15 @@ const autoBlurb = f => {
   const uses = f.u.slice(0, 2).map(u => USES[u].toLowerCase());
   return `${art} ${k} typeface${by}${pub}.${uses.length ? ` Suited to ${uses.join(' and ')}.` : ''}`;
 };
-F.forEach(f => { if (!f.b) f.b = autoBlurb(f); f.hay = [f.n, f.d, f.p, f.b, ...(f.subsets || []), CLS[f.c], kindLabel(f), ...f.s.map(x => SUBS[x]), ...f.a.map(x => APPEAR[x] || x), ...f.u.map(x => USES[x]), ...f.t.map(x => THEMES[x])].join(' ').toLowerCase(); });
-const filterLabel = (set, k) => set === 'feel' ? THEMES[k] : set === 'use' ? USES[k] : set === 'app' ? APPEAR[k] : set === 'tech' ? (k === 'color' ? 'Colour font' : 'Variable') : SUBS[k];
+F.forEach(f => { if (!f.b) f.b = autoBlurb(f); f.hay = [f.n, f.d, f.p, f.b, ...(f.subsets || []), ...(f.labels?.keywords || []),f.tags||'',f.manual?'manually added licence unverified local':'', CLS[f.c], kindLabel(f), ...f.s.map(x => SUBS[x]), ...f.a.map(x => APPEAR[x] || x), ...f.u.map(x => USES[x]), ...f.t.map(x => THEMES[x])].join(' ').toLowerCase(); });
+function syncLocalRegistry(){
+ const records=desktop.enabled?desktop.localFonts():window.OpenShelfLocal.records();
+ F.filter(f=>f.manual).forEach(f=>{delete BY[f.slug];});
+ for(let i=F.length-1;i>=0;i--)if(F[i].manual)F.splice(i,1);
+ records.map(localFont).forEach(f=>{f.hay=[f.n,f.d,f.b,f.tags,CLS[f.c],'manually added licence unverified local'].join(' ').toLowerCase();F.push(f);BY[f.slug]=f;});
+ normaliseCols();saveCols();
+}
+const filterLabel = (set, k) => set === 'source' ? SOURCES[k] : set === 'feel' ? THEMES[k] : set === 'use' ? USES[k] : set === 'app' ? APPEAR[k] : set === 'tech' ? (k === 'color' ? 'Colour font' : 'Variable') : SUBS[k];
 
 /* ---------- pairings ----------
    prov: family = designed together, classic = long-standing web classic, modern = contemporary favourite */
@@ -478,25 +502,33 @@ const store = {
 const DEFAULT_RAND = { hCls:['serif','sans','display','slab'], bCls:['sans','serif'], theme:'', textOnly:true, contrast:true, varOnly:false, from:'' };
 const state = {
   text: store.get('text', ''), size: store.get('size', 48), layout: store.get('layout', 'list'),
-  gridCols:store.get('gridCols', 'auto'), limit:48, sort:'az', q:'', f:{feel:new Set(), app:new Set(), serif:new Set(), sans:new Set(), calli:new Set(), use:new Set(), tech:new Set()}, fmode: store.get('fmode', {}), col:null,
+  gridCols:store.get('gridCols', 'auto'), limit:48, sort:'az', q:'', f:{source:new Set(), feel:new Set(), app:new Set(), serif:new Set(), sans:new Set(), calli:new Set(), use:new Set(), tech:new Set()}, fmode: store.get('fmode', {}), col:null,
   prov:'', mood:'',
   pair: store.get('pair', {h:'instrument-serif', b:'inter'}),
   locks:{h:false, b:false}, history:[],
   rand: Object.assign({}, DEFAULT_RAND, store.get('rand', {})),
-  cols: store.get('cols', null),
+  cols: store.get('cols', null), collectionText: String(store.get('collectionText', '')).slice(0,500),
   weight: store.get('gw', 0), ital: store.get('gi', false), card:{}, exactW:false,
   open: new Set(), renaming:null, importOpen:false, shuffle:{}
 };
+function cleanCollectionPreview(p) {
+  return {mode:['name','page','custom'].includes(p?.mode) ? p.mode : 'name',text:String(p?.text || '').slice(0,500),layout:p?.layout==='grid'?'grid':'list',columns:/^(auto|[1-6])$/.test(p?.columns)?p.columns:'auto'};
+}
+const COL_COLORS={none:'No colour',red:'Red',orange:'Orange',gold:'Gold',green:'Green',blue:'Blue',purple:'Purple',pink:'Pink'};
+const COL_ICONS={none:'No icon',star:'★',heart:'♥',book:'▤',folder:'▱',circle:'●',diamond:'◆',flag:'⚑'};
+const cleanMarker=m=>({color:Object.hasOwn(COL_COLORS,m?.color)?m.color:'none',icon:Object.hasOwn(COL_ICONS,m?.icon)?m.icon:'none'});
 function normaliseCols() {
   if (!Array.isArray(state.cols)) state.cols = [];
   state.cols = state.cols.filter(c => c && c.id && c.name);
   if (!state.cols.find(c => c.id === 'favs')) state.cols.unshift({id:'favs', name:'Favourites', fonts:[], pairs:[], fixed:true});
   state.cols.forEach(c => {
+    c.preview = cleanCollectionPreview(c.preview);c.marker=cleanMarker(c.marker);
     c.fonts = [...new Set((c.fonts || []).filter(s => BY[s]))];
     c.pairs = (c.pairs || []).filter(p => p && BY[p.h] && BY[p.b]);
   });
 }
 normaliseCols();
+state.fmode.source = 'any';
 if (![0,100,200,300,400,500,600,700,800,900].includes(state.weight)) state.weight = 0;
 if (!BY[state.pair.h] || !BY[state.pair.b]) state.pair = {h:'instrument-serif', b:'inter'};
 const HS_DEF = {w:0, i:false, size:72, ls:0, up:false}, BS_DEF = {w:0, i:false, size:18, lh:1.7};
@@ -509,12 +541,25 @@ const saveCols = () => { store.set('cols', state.cols); updateColCount(); };
 const getCol = id => state.cols.find(c => c.id === id);
 const isFav = slug => getCol('favs').fonts.includes(slug);
 
+/* ---------- motion ---------- */
+const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+function enterMotion(el) {
+  if (!el || reducedMotion() || !el.animate) return;
+  el.animate([{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'translateY(0)'}],{duration:280,easing:'cubic-bezier(.16,1,.3,1)'});
+}
+function pulse(el) {
+  if (!el || reducedMotion() || !el.animate) return;
+  el.animate([{transform:'scale(1)'},{transform:'scale(1.18)',offset:.35},{transform:'scale(1)'}],{duration:380,easing:'cubic-bezier(.22,1,.36,1)'});
+}
+function savedFeedback() { $$('[data-action="drawer"] .i, #col-count').forEach(pulse); }
+
 /* ---------- helpers ---------- */
 const proof = () => state.text || DEFAULT_TEXT;
 const nearestW = (f, w) => f.w.reduce((best, x) => { const d = Math.abs(x - w), bd = Math.abs(best - w); return (d < bd || (d === bd && w >= 500 && x > best)) ? x : best; }, f.w[0]);
 const libW = f => { const c = state.card[f.slug]; if (c && c.w && f.w.includes(c.w)) return c.w; return state.weight ? nearestW(f, state.weight) : pvWeight(f); };
 const libI = f => { const c = state.card[f.slug]; return c && typeof c.i === 'boolean' ? c.i : !!state.ital; };
-const fam = f => `'${f.n}', ${FALLBACK[f.c]}`;
+const familyCSS = f => `${JSON.stringify(desktop.enabled?desktop.fontFamily(f):(f.previewFamily||f.n))}, ${FALLBACK[f.c]}`;
+const fam = f => esc(familyCSS(f));
 const pvWeight = f => f.w.includes(400) ? 400 : f.w[0];
 const headWeight = f => (f.c === 'display' || f.c === 'script') ? pvWeight(f) : (f.w.includes(600) ? 600 : f.w.includes(700) ? 700 : pvWeight(f));
 const pairHW = p => { const h = BY[p.h]; return (p.hw && h.w.includes(p.hw)) ? p.hw : headWeight(h); };
@@ -542,7 +587,7 @@ const ICON = {
 
 /* ---------- font loading ---------- */
 const loaded = new Set(), unavailable = new Set();
-const available = f => f && !unavailable.has(f.slug);
+const available = f => f && !unavailable.has(f.slug) && (!desktop.offline || desktop.has(f));
 let availabilityTimer;
 function hideUnavailable(f) {
   unavailable.add(f.slug);
@@ -555,13 +600,16 @@ function hideUnavailable(f) {
     if (!available(BY[state.pair.h]) || !available(BY[state.pair.b])) {
       const pool = F.filter(available); if (pool.length) state.pair = normPS({h:pool[0].slug,b:(pool[1] || pool[0]).slug});
     }
-    route();
+    if (!$('#view-library').hidden) {
+      $$('#results .font').filter(el=>unavailable.has(el.dataset.slug)).forEach(el=>{el.classList.add('font-unavailable');el.setAttribute('aria-hidden','true');el.inert=true;});
+      const list=filtered();syncPanel(list);$('#count').textContent=`${list.length.toLocaleString()} fonts · unavailable previews hidden`;
+    }
   }, 180);
 }
-function addSheet(q) {
+function addSheet(q, url) {
   return new Promise((resolve,reject) => {
     const l = document.createElement('link'); l.rel = 'stylesheet';
-    l.href = `https://fonts.googleapis.com/css2?family=${q}&display=swap`;
+    l.href = url || `https://fonts.googleapis.com/css2?family=${q}&display=swap`;
     const timeout = setTimeout(() => { l.remove(); reject(new Error('Font request timed out')); }, 20000);
     l.onload = () => { clearTimeout(timeout); resolve(); };
     l.onerror = () => { clearTimeout(timeout); l.remove(); reject(new Error('Font stylesheet unavailable')); };
@@ -570,15 +618,16 @@ function addSheet(q) {
 }
 async function loadFont(f, weights, ital) {
   if (!available(f)) return;
+  if (f.manual && !desktop.enabled) {try{await window.OpenShelfLocal.load(f);}catch(e){hideUnavailable(f);}return;}
+  if (desktop.enabled) { try { if(await desktop.load(f))return; } catch(e) { if(desktop.offline){hideUnavailable(f);return;} } if(desktop.offline)return; }
   let ws = (weights || [pvWeight(f)]).filter(w => f.w.includes(w));
   if (!ws.length) ws = [pvWeight(f)];
   ws = [...new Set(ws)].sort((a,b) => a-b);
-  ital = !!ital && !f.noItal;
+  ital = f.regularStyle === 'italic' || (!!ital && !f.noItal);
   const key = f.n + ':' + ws.join(',') + (ital ? ':i' : '');
   if (loaded.has(key)) return;
   loaded.add(key);
   const family = encodeURIComponent(f.n).replace(/%20/g,'+');
-  const spec = ital ? ':ital,wght@' + ws.map(w => '1,' + w).join(';') : ':wght@' + ws.join(';');
   async function verify() {
     const result = await document.fonts.load(`${ital ? 'italic ' : ''}${ws[0]} 20px "${f.n}"`, ' ');
     if (!result.length) {
@@ -587,10 +636,13 @@ async function loadFont(f, weights, ital) {
       await faces[0].load();
     }
   }
-  try { await addSheet(family + spec); await verify(); }
+  const request = () => f.source === 'fontsource'
+    ? Promise.all(ws.map(w => addSheet('', `https://cdn.jsdelivr.net/npm/@fontsource/${f.fontsourceId}@${f.fontsourceVersion}/${w}${ital ? '-italic' : ''}.css`)))
+    : addSheet(family + (ital ? ':ital,wght@' + ws.map(w => '1,' + w).join(';') : ':wght@' + ws.join(';')));
+  try { await request(); await verify(); }
   catch (e) {
     // Retry the actual regular style before hiding an entire family.
-    try { ital = false; ws = [pvWeight(f)]; await addSheet(family + ':wght@' + ws[0]); await verify(); }
+    try { ital = f.regularStyle === 'italic'; ws = [pvWeight(f)]; await request(); await verify(); }
     catch (err) { hideUnavailable(f); }
   }
 }
@@ -648,9 +700,9 @@ function buildPanel() {
     <div class="fp-head"><h2>Filters</h2><button class="linkbtn" data-action="clear">Reset</button><button class="ib fp-hide" data-action="fpanel-hide" aria-label="Hide filters" title="Hide filters"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M9.5 4.5v15M15.5 10l-2 2 2 2"/></svg></button><button class="ib fp-close" data-action="fpanel-close" aria-label="Close filters">${ICON.x}</button></div>
     ${SECTIONS.map(sec => `<details class="fsec" data-sec="${sec.id}" ${closed.has(sec.id) ? '' : 'open'}>
       <summary><span>${sec.title}</span><span class="fsel" style="visibility:hidden">0</span>${ICON.chev}</summary>
-      <div class="fmode" role="group" aria-label="How picks in ${sec.title} combine"><button data-action="fmode" data-set="${sec.set}" data-mode="all" title="Show fonts that have every pick">Match all</button><button data-action="fmode" data-set="${sec.set}" data-mode="any" title="Show fonts that have at least one pick">Match any</button></div>
+      ${sec.set === 'source' ? '' : `<div class="fmode" role="group" aria-label="How picks in ${sec.title} combine"><button data-action="fmode" data-set="${sec.set}" data-mode="all" title="Show fonts that have every pick">Match all</button><button data-action="fmode" data-set="${sec.set}" data-mode="any" title="Show fonts that have at least one pick">Match any</button></div>`}
       <div class="fchips">${Object.entries(sec.opts).map(([k, l]) => {
-        if (!F.some(f => matches(f, sec.set, k))) return '';
+        if (sec.set!=='source' && !F.some(f => matches(f, sec.set, k))) return '';
         const r = BY[REP[k]];
         const ag = r ? `<span class="fag" aria-hidden="true" style="font-family:${fam(r)};font-weight:${pvWeight(r)}">${k === 'code' ? '{ }' : 'Ag'}</span>` : '';
         return `<button class="fchip" data-action="fchip" data-set="${sec.set}" data-val="${k}" aria-pressed="false">${ag}${esc(l)}<span class="c"></span></button>`;
@@ -658,14 +710,14 @@ function buildPanel() {
     </details>`).join('')}
     <p class="fhint">Fonts must match every pick within a section. Switch a section to \u201cMatch any\u201d to see fonts with at least one of its picks.</p>
     <div class="fp-foot"><button class="btn primary" data-action="fpanel-close" id="fp-show">Show fonts</button></div>`;
-  [...new Set(Object.values(REP))].forEach(sl => { if (BY[sl]) loadFont(BY[sl]); });
+  [...new Set(Object.values(REP))].forEach(sl => { if (BY[sl] && !desktop.enabled) loadFont(BY[sl]); });
 }
 function filterCtx() { return { q: state.q.trim().toLowerCase(), col: state.col ? getCol(state.col) : null }; }
 function passes(f, ctx, extra) {
   if (!available(f)) return false;
   for (const set in state.f) {
     let sel = state.f[set];
-    if (extra && extra.set === set) { sel = new Set(sel); sel.add(extra.k); }
+    if (extra && extra.set === set) { sel = new Set(extra.only ? [] : sel); sel.add(extra.k); }
     if (!sel.size) continue;
     const arr = [...sel];
     const ok = state.fmode[set] === 'any' ? arr.some(k => matches(f, set, k)) : arr.every(k => matches(f, set, k));
@@ -673,7 +725,7 @@ function passes(f, ctx, extra) {
   }
   if (state.exactW && state.weight && !f.w.includes(state.weight)) return false;
   if (ctx.col && !ctx.col.fonts.includes(f.slug)) return false;
-  if (ctx.q && !f.hay.includes(ctx.q)) return false;
+  if (ctx.q && !ctx.q.split(/\s+/).every(word=>f.hay.includes(word))) return false;
   return true;
 }
 function syncPanel(list) {
@@ -681,7 +733,7 @@ function syncPanel(list) {
   $$('#fpanel .fchip').forEach(b => {
     const set = b.dataset.set, k = b.dataset.val, on = state.f[set].has(k);
     b.setAttribute('aria-pressed', String(on));
-    const n = on ? list.filter(f => matches(f, set, k)).length : F.filter(f => passes(f, ctx, {set, k})).length;
+    const n = set === 'source' ? F.filter(f => passes(f, ctx, {set, k, only:true})).length : on ? list.filter(f => matches(f, set, k)).length : F.filter(f => passes(f, ctx, {set, k})).length;
     $('.c', b).textContent = n; b.classList.toggle('zero', !n && !on);
   });
   $$('#fpanel .fmode button').forEach(b => b.setAttribute('aria-pressed', String((state.fmode[b.dataset.set] || 'all') === b.dataset.mode)));
@@ -706,13 +758,13 @@ function fontCard(f) {
   el.innerHTML = `
     <div class="font-head">
       <a class="font-name" href="#/font/${f.slug}">${esc(f.n)}</a>
-      <span class="meta m1">${esc(f.d)}</span><span class="meta">${kindLabel(f)}</span><span class="meta">${styles(f)}</span>${f.y ? `<span class="meta">${f.y}</span>` : ''}${state.weight && !(state.card[f.slug] && state.card[f.slug].w) && libW(f) !== state.weight ? `<span class="meta" title="${esc(f.n)} doesn't come in ${state.weight}">Shown at ${libW(f)}</span>` : ''}<span class="meta" data-noital="${f.slug}" ${f.noItal && libI(f) ? '' : 'hidden'}>No true italic</span>
+      ${f.manual?'<span class="manual-badge">Manually added · licence unverified</span>':''}<span class="meta m1">${esc(f.d)}</span><span class="meta">${kindLabel(f)}</span><span class="meta">${styles(f)}</span>${f.y ? `<span class="meta">${f.y}</span>` : ''}${state.weight && !(state.card[f.slug] && state.card[f.slug].w) && libW(f) !== state.weight ? `<span class="meta" title="${esc(f.n)} doesn't come in ${state.weight}">Shown at ${libW(f)}</span>` : ''}<span class="meta" data-noital="${f.slug}" ${f.noItal && libI(f) ? '' : 'hidden'}>No true italic</span>
       <div class="font-acts">
         <select class="mini" data-card="w" data-slug="${f.slug}" aria-label="Weight for ${esc(f.n)}" ${f.w.length === 1 ? 'disabled' : ''}>${f.w.map(w => `<option value="${w}" ${w === libW(f) ? 'selected' : ''}>${w} ${WNAME[w] || ""}</option>`).join('')}</select>
         <button class="ib ibt" data-action="cardi" data-slug="${f.slug}" aria-pressed="${libI(f)}" aria-label="Italic for ${esc(f.n)}" title="Italic"><i>I</i></button>
         <button class="ib" data-action="fav" data-slug="${f.slug}" aria-pressed="${isFav(f.slug)}" aria-label="Favourite ${esc(f.n)}" title="Favourite">${ICON.heart}</button>
         <button class="ib" data-action="save" data-kind="font" data-slug="${f.slug}" aria-label="Save ${esc(f.n)} to a collection" title="Save to collection">${ICON.save}</button>
-        <a class="ib" href="${f.gf}" target="_blank" rel="noopener" aria-label="Download ${esc(f.n)} from Google Fonts" title="Download">${ICON.get}</a>
+        ${desktop.enabled ? desktop.buttons(f,true) : f.manual?`<a class="btn sm" href="#/local">Local details</a>` : `<a class="ib" href="${f.gf}" target="_blank" rel="noopener" aria-label="Download ${esc(f.n)} from ${SOURCES[f.source]}" title="Download">${ICON.get}</a>`}
       </div>
     </div>
     <a class="pv" href="#/font/${f.slug}" data-pv tabindex="-1" style="font-family:${fam(f)};font-weight:${libW(f)};font-style:${libI(f) ? 'italic' : 'normal'}"></a>`;
@@ -739,6 +791,7 @@ function renderActive() {
     (chips.length || state.q ? '<button class="linkbtn" data-action="clear">Reset</button>' : '');
 }
 function renderLibrary() {
+  const savedY=window.scrollY;
   renderToolbarState(); renderActive();
   const list = filtered();
   syncPanel(list);
@@ -763,6 +816,7 @@ function renderLibrary() {
   const frag = document.createDocumentFragment();
   list.slice(0,state.limit).forEach(f => { const c = fontCard(f); frag.appendChild(c); io ? io.observe(c) : loadFont(f, [libW(f)], libI(f)); });
   box.appendChild(frag);
+  window.scrollTo({top:savedY,behavior:'instant'});
 }
 function anchorLib() {
   const lib = $('#view-library'); if (lib.hidden) return;
@@ -792,35 +846,36 @@ function openSaveMenu(btn, item) {
   p.innerHTML = `<h4>Save ${esc(label)}</h4>
     <form class="inline-new" data-form="pop-new"><input type="text" placeholder="New collection" aria-label="New collection name" maxlength="60"><button class="btn sm primary" type="submit">Create</button></form>
     <div class="opts">${state.cols.map(c => `<label><input type="checkbox" data-col="${c.id}" ${has(c) ? 'checked' : ''}> ${esc(c.name)}<span class="c">${colSummary(c) === 'Empty' ? '' : colSummary(c)}</span></label>`).join('')}</div>`;
-  placePop(btn);
+  placePop(btn); enterMotion(p);
   if (matchMedia('(pointer:fine)').matches) $('input[type=text]', p).focus(); else $('input', p).focus();
 }
 
 /* ---------- collections model ---------- */
 function newCollection(name, fonts, pairs) {
   name = (name || '').trim(); if (!name) return null;
-  const c = {id:'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, fonts:[...new Set(fonts || [])], pairs:pairs || []};
-  state.cols.push(c); saveCols(); return c;
+  const c = {id:'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name, fonts:[...new Set(fonts || [])], pairs:pairs || [], preview:cleanCollectionPreview(),marker:cleanMarker()};
+  state.cols.push(c); saveCols(); savedFeedback(); return c;
 }
 function setFont(colId, slug, on) {
   const c = getCol(colId); if (!c) return; const has = c.fonts.includes(slug); if (on === undefined) on = !has;
-  if (on && !has) c.fonts.push(slug); if (!on && has) c.fonts = c.fonts.filter(s => s !== slug); saveCols();
+  if (on && !has) c.fonts.push(slug); if (!on && has) c.fonts = c.fonts.filter(s => s !== slug); saveCols(); if (on && !has) savedFeedback();
 }
 function setPair(colId, pr, on) {
   const c = getCol(colId); if (!c) return; const has = c.pairs.some(x => pkey(x) === pkey(pr)); if (on === undefined) on = !has;
-  if (on && !has) c.pairs.push(pr.hs && !isDefaultStyle(pr) ? {h:pr.h, b:pr.b, hs:normPS(pr).hs, bs:normPS(pr).bs} : {h:pr.h, b:pr.b}); if (!on && has) c.pairs = c.pairs.filter(x => pkey(x) !== pkey(pr)); saveCols();
+  if (on && !has) c.pairs.push(pr.hs && !isDefaultStyle(pr) ? {h:pr.h, b:pr.b, hs:normPS(pr).hs, bs:normPS(pr).bs} : {h:pr.h, b:pr.b}); if (!on && has) c.pairs = c.pairs.filter(x => pkey(x) !== pkey(pr)); saveCols(); if (on && !has) savedFeedback();
 }
 function updateColCount() {
   const n = state.cols.reduce((a, c) => a + c.fonts.length + c.pairs.length, 0);
   const b = $('#col-count'); b.textContent = n; b.hidden = !n;
 }
 function refreshFav(slug) { $$(`[data-action="fav"][data-slug="${slug}"]`).forEach(b => b.setAttribute('aria-pressed', String(isFav(slug)))); }
-function afterColChange() { if (drawerOpen()) renderDrawer(); if (!$('#view-library').hidden && state.col) renderLibrary(); else if (!$('#view-library').hidden) renderActive(); }
+function afterColChange() { if(desktop.enabled)desktop.syncCollections(state.cols); if (drawerOpen() || !$('#view-collections').hidden) renderDrawer(); if (!$('#view-library').hidden && state.col) renderLibrary(); else if (!$('#view-library').hidden) renderActive(); }
 
 /* ---------- export / import ---------- */
 function exportObj(cols) {
+  const fontRef = slug => BY[slug].manual ? {id:slug,name:BY[slug].n,source:'local'} : BY[slug].n;
   return { app:'open-shelf', version:1, exported:new Date().toISOString(),
-    collections: cols.map(c => ({ name:c.name, fonts:c.fonts.map(s => BY[s].n), pairs:c.pairs.map(p => Object.assign({heading:BY[p.h].n, body:BY[p.b].n}, p.hs ? {headingStyle:p.hs, bodyStyle:p.bs} : {})) })) };
+    collections: cols.map(c => ({ name:c.name, marker:c.marker, preview:{...c.preview, ...(c.preview.mode === 'page' ? {pageText:state.collectionText} : {})}, fonts:c.fonts.map(fontRef), pairs:c.pairs.map(p => Object.assign({heading:fontRef(p.h), body:fontRef(p.b)}, p.hs ? {headingStyle:p.hs, bodyStyle:p.bs} : {})) })) };
 }
 const fileName = s => (s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'collection') + '.json';
 let dlCap;
@@ -847,7 +902,7 @@ async function download(name, text) {
     toast(`Exported ${name}`);
   } catch (e) { copyText(text, 'Download blocked here, so the JSON was copied instead'); }
 }
-const resolve = v => { if (!v) return null; const s = String(v).trim().toLowerCase(); return BY[s] ? s : (BYNAME[s] || BY[s.replace(/\s+/g, '-')] && s.replace(/\s+/g, '-') || null); };
+const resolve = v => { if (!v) return null;if(typeof v==='object')return v.source==='local'&&BY[v.id]?.manual?v.id:null; const s = String(v).trim().toLowerCase(); return BY[s] ? s : (BYNAME[s] || BY[s.replace(/\s+/g, '-')] && s.replace(/\s+/g, '-') || null); };
 function importFrom(data) {
   const list = Array.isArray(data) ? data : Array.isArray(data && data.collections) ? data.collections : (data && data.name ? [data] : null);
   if (!list) throw new Error('shape');
@@ -861,7 +916,7 @@ function importFrom(data) {
       const f = getCol('favs'); fonts.forEach(s => { if (!f.fonts.includes(s)) f.fonts.push(s); }); pairs.forEach(p => { if (!f.pairs.some(x => pkey(x) === pkey(p))) f.pairs.push(p); }); merged++;
     } else {
       let n = name; let i = 2; while (state.cols.some(c => c.name.toLowerCase() === n.toLowerCase())) n = `${name} (${i++})`;
-      newCollection(n, fonts, pairs); made++;
+      const added = newCollection(n, fonts, pairs); added.marker=cleanMarker(raw.marker);added.preview = cleanCollectionPreview(raw.preview); if (added.preview.mode === 'page' && typeof raw.preview.pageText === 'string') added.preview = {...added.preview,mode:'custom',text:raw.preview.pageText.slice(0,500)}; made++;
     }
   });
   saveCols();
@@ -891,15 +946,51 @@ async function copyText(text, msg) {
 function embedCode(c) {
   const slugs = [...new Set([...c.fonts, ...c.pairs.flatMap(p => [p.h, p.b])])];
   if (!slugs.length) return '';
-  const fams = slugs.map(s => BY[s]).map(f => { let ws = [400, 700].filter(w => f.w.includes(w)); if (!ws.length) ws = [pvWeight(f)]; return 'family=' + f.n.replace(/ /g, '+') + (f.w.length === 1 ? '' : ':wght@' + ws.join(';')); }).join('&');
-  return `<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n<link href="https://fonts.googleapis.com/css2?${fams}&display=swap" rel="stylesheet">\n\n` +
-    slugs.map(s => BY[s]).map(f => `/* ${f.n} */ font-family: ${fam(f).replace(/'/g, '"')};`).join('\n');
+  const fonts = slugs.map(s => BY[s]).filter(f=>!f.manual);
+  const fams = fonts.filter(f => f.source !== 'fontsource').map(f => { let ws = [400, 700].filter(w => f.w.includes(w)); if (!ws.length) ws = [pvWeight(f)]; return 'family=' + encodeURIComponent(f.n).replace(/%20/g,'+') + (f.w.length === 1 ? '' : ':wght@' + ws.join(';')); }).join('&');
+  const links = fams ? [`<link href="https://fonts.googleapis.com/css2?${fams}&display=swap" rel="stylesheet">`] : [];
+  fonts.filter(f => f.source === 'fontsource').forEach(f => links.push(`<link href="https://cdn.jsdelivr.net/npm/@fontsource/${f.fontsourceId}@${f.fontsourceVersion}/index.css" rel="stylesheet">`));
+  return (slugs.some(s=>BY[s].manual)?'<!-- Manually added fonts omitted: verify licences and supply your own licensed files. -->\n':'') + links.join('\n') + '\n\n' + fonts.map(f => `/* ${f.n} */ font-family: ${JSON.stringify(f.n)}, ${FALLBACK[f.c]};`).join('\n');
 }
+
+/* ---------- mobile navigation ---------- */
+let navAnimation;
+function setNavOpen(open) {
+  const nav=$('#main-nav'), button=$('#nav-toggle');
+  const mobile=matchMedia('(max-width:700px)').matches;
+  const clear=()=>{nav.style.height='';nav.style.opacity='';nav.style.marginTop='';};
+  if (!mobile) { navAnimation?.cancel();navAnimation=null;clear();nav.classList.remove('is-open');nav.inert=false;button.setAttribute('aria-expanded','false');return; }
+  if ((button.getAttribute('aria-expanded')==='true')===open) return;
+  const wasOpen=nav.classList.contains('is-open'),from=wasOpen?nav.getBoundingClientRect().height:0;
+  const opacity=wasOpen?getComputedStyle(nav).opacity:0,margin=wasOpen?getComputedStyle(nav).marginTop:'0px';
+  navAnimation?.cancel();navAnimation=null;clear();
+  button.setAttribute('aria-expanded',String(open));nav.inert=!open;
+  if(reducedMotion()||!nav.animate){nav.classList.toggle('is-open',open);return;}
+  nav.classList.add('is-open');const to=open?nav.scrollHeight:0;
+  const animation=nav.animate([{height:from+'px',opacity,marginTop:margin},{height:to+'px',opacity:open?1:0,marginTop:open?'12px':'0px'}],{duration:320,easing:'cubic-bezier(.22,1,.36,1)',fill:'forwards'});
+  navAnimation=animation;
+  animation.onfinish=()=>{if(navAnimation!==animation)return;nav.classList.toggle('is-open',open);animation.cancel();navAnimation=null;clear();};
+}
+
+$('#nav-toggle').addEventListener('click', () => setNavOpen($('#nav-toggle').getAttribute('aria-expanded') !== 'true'));
+$('#main-nav').addEventListener('click', e => {
+  if (!e.target.closest('a')) return;
+  const wasOpen = $('#nav-toggle').getAttribute('aria-expanded') === 'true';
+  setNavOpen(false);
+  if (wasOpen) requestAnimationFrame(() => $('#main').focus({preventScroll:true}));
+});
+document.addEventListener('click', e => {
+  if (!e.target.closest('.top')) setNavOpen(false);
+  if (e.target.closest('#drawer a[href^="#"]')) closeDrawer();
+});
+window.matchMedia('(max-width:700px)').addEventListener('change', () => setNavOpen(false));
 
 /* ---------- drawer ---------- */
 const drawerOpen = () => $('#drawer').classList.contains('on');
-let drawerOpener = null;
+let drawerOpener = null, drawerCloseTimer;
 function openDrawer(focusNew) {
+  setNavOpen(false);
+  clearTimeout(drawerCloseTimer); $('#drawer').inert=false;
   drawerOpener = document.activeElement;
   renderDrawer();
   const s = $('#scrim'); s.hidden = false; requestAnimationFrame(() => s.classList.add('on'));
@@ -909,18 +1000,25 @@ function openDrawer(focusNew) {
 }
 function closeDrawer() {
   if (!drawerOpen()) return;
-  $('#drawer').classList.remove('on'); const s = $('#scrim'); s.classList.remove('on'); setTimeout(() => { s.hidden = true; }, 200);
+  $('#drawer').classList.remove('on'); const s = $('#scrim'); s.classList.remove('on'); $('#drawer').inert=true; drawerCloseTimer=setTimeout(() => { s.hidden = true; }, reducedMotion()?0:360);
   $$('[data-action="drawer"]').forEach(b => b.setAttribute('aria-expanded', 'false'));
   state.importOpen = false; state.renaming = null;
+  if (!$('#view-collections').hidden) { renderCollectionsPage(); updateCollectionPreviews(); }
   if (drawerOpener && document.contains(drawerOpener)) drawerOpener.focus();
+  else $('[data-action="drawer"]', $('#view-collections').hidden ? $('.top') : $('#view-collections')).focus();
 }
-function renderDrawer() {
-  const d = $('#drawer');
-  const scroll = $('.dr-body', d) ? $('.dr-body', d).scrollTop : 0;
-  d.innerHTML = `
-    <div class="dr-head"><h2>Collections</h2><button class="ib" data-action="drawer-close" aria-label="Close collections">${ICON.x}</button></div>
-    <div class="dr-body">
-      <form class="dr-new" data-form="dr-new"><input class="field" type="text" placeholder="Name a new collection" aria-label="New collection name" maxlength="60"><button class="btn primary" type="submit">Create</button></form>
+function collectionPreviewText(c, f) {
+  return (c.preview.mode === 'custom' ? c.preview.text : c.preview.mode === 'page' ? state.collectionText : '') || f.n;
+}
+function updateCollectionPreviews() {
+  $$('[data-col-preview]').forEach(el => { const c=getCol(el.dataset.col), f=BY[el.dataset.font]; if(c && f) el.textContent=collectionPreviewText(c,f); });
+  $$('[data-preview-label]').forEach(el => { const c=getCol(el.dataset.previewLabel); el.hidden = c.preview.mode === 'name' || !(c.preview.mode === 'page' ? state.collectionText : c.preview.text); });
+}
+function collectionPreviewControls(c) {
+  return `<div class="collection-preview-controls"><label>View<select class="sel" data-collection-setting="layout" data-col="${c.id}"><option value="list" ${c.preview.layout==='list'?'selected':''}>List</option><option value="grid" ${c.preview.layout==='grid'?'selected':''}>Grid</option></select></label><label class="collection-columns" ${c.preview.layout==='grid'?'':'hidden'}>Columns<select class="sel" data-collection-setting="columns" data-col="${c.id}">${['auto','1','2','3','4','5','6'].map(v=>`<option value="${v}" ${c.preview.columns===v?'selected':''}>${v==='auto'?'Auto':v}</option>`).join('')}</select></label><label>Preview text<select class="sel" data-preview-mode="${c.id}"><option value="name" ${c.preview.mode==='name'?'selected':''}>Font names</option><option value="page" ${c.preview.mode==='page'?'selected':''}>Page text</option><option value="custom" ${c.preview.mode==='custom'?'selected':''}>Custom text</option></select></label>${c.preview.mode==='custom'?`<label class="collection-custom">Text for ${esc(c.name)}<input class="field" data-preview-custom="${c.id}" maxlength="500" value="${esc(c.preview.text)}" placeholder="Type a preview for this collection"></label>`:''}<label>Colour<select class="sel" data-marker="color" data-col="${c.id}">${Object.entries(COL_COLORS).map(([v,n])=>`<option value="${v}" ${c.marker.color===v?'selected':''}>${n}</option>`).join('')}</select></label><label>Icon<select class="sel" data-marker="icon" data-col="${c.id}">${Object.entries(COL_ICONS).map(([v,n])=>`<option value="${v}" ${c.marker.icon===v?'selected':''}>${v==='none'?n:n+' '+v}</option>`).join('')}</select></label></div>`;
+}
+function collectionContent(scope) {
+  return `<div class="collection-preview-global"><label><span>Page preview text</span><input class="field" data-preview-page maxlength="500" value="${esc(state.collectionText)}" placeholder="Type a shared preview for your collections"></label><button class="btn sm" data-action="preview-all">Use for all collections</button><p class="meta">Leave text blank to preview each font’s name. Choose custom text within a collection to override it.</p></div>` + `      <form class="dr-new" data-form="dr-new"><input class="field" type="text" placeholder="Name a new collection" aria-label="New collection name" maxlength="60"><button class="btn primary" type="submit">Create</button></form>
       <div class="dr-tools">
         <button class="btn sm" data-action="import-toggle" aria-expanded="${state.importOpen}">Import</button>
         <button class="btn sm" data-action="export-all">Export all</button>
@@ -928,23 +1026,38 @@ function renderDrawer() {
       </div>
       ${state.importOpen ? `<div class="dr-import">
         <p>Choose an Open Shelf .json export, or paste its contents below. Imported collections are added alongside yours.</p>
-        <textarea id="import-text" placeholder='{"collections":[{"name":"Brand refresh","fonts":["Inter"],"pairs":[{"heading":"Fraunces","body":"Inter"}]}]}' aria-label="Paste collection JSON"></textarea>
+        <textarea id="${scope}-import-text" data-collection-import placeholder='{"collections":[{"name":"Brand refresh","fonts":["Inter"],"pairs":[{"heading":"Fraunces","body":"Inter"}]}]}' aria-label="Paste collection JSON"></textarea>
         <div class="row"><button class="btn sm primary" data-action="import-paste">Import pasted JSON</button><button class="btn sm" data-action="import-file">Choose file</button><button class="btn sm quiet" data-action="import-toggle">Cancel</button></div>
       </div>` : ''}
-      <div class="dr-list">${state.cols.map(drawerItem).join('')}</div>
-    </div>`;
-  state.cols.forEach(c => { if (state.open.has(c.id)) { c.fonts.forEach(s => loadFont(BY[s])); c.pairs.forEach(p => { loadFont(BY[p.h], [pairHW(p)]); }); } });
+      <div class="dr-list">${state.cols.map(drawerItem).join('')}</div>`;
+}
+function renderCollectionsPage() {
+  $('#view-collections').innerHTML = `<header class="page-head"><h1>Collections</h1><p><span class="copy-line">Organise saved fonts and pairings for your projects.</span> <span class="copy-line">These are the same collections as the side panel, saved in this browser.</span></p></header><div class="collections-heading"><p class="count">${plural(state.cols.length, 'collection')} · ${plural(state.cols.reduce((n,c)=>n+c.fonts.length+c.pairs.length,0), 'saved item')}</p><button class="btn sm" data-action="drawer" aria-controls="drawer" aria-expanded="${drawerOpen()}">Open side panel</button></div><div class="collection-manager collections-workspace">${collectionContent('page')}</div>`;
+}
+function renderDrawer() {
+  const previousHeights=new Map($$('[data-col-card]').filter(el=>el.offsetParent).map(el=>[(el.closest('#drawer')?'drawer:':'page:')+el.dataset.colCard,el.getBoundingClientRect().height]));
+  const d = $('#drawer');
+  const pageActive = !drawerOpen() && !$('#view-collections').hidden;
+  const scroll = $('.dr-body', d) ? $('.dr-body', d).scrollTop : 0;
+  d.innerHTML = `<div class="dr-head"><h2>Collections</h2><button class="ib" data-action="drawer-close" aria-label="Close collections">${ICON.x}</button></div><div class="dr-body collection-manager"><a class="drawer-page-link" href="#/collections">View all collections →</a>${collectionContent('drawer')}</div>`;
+  if (!$('#view-collections').hidden) renderCollectionsPage();
+  state.cols.forEach(c => { if (state.open.has(c.id)) { c.fonts.forEach(s => loadFont(BY[s])); c.pairs.forEach(p => { loadFont(BY[p.h], [pairHW(p)]); loadFont(BY[p.b]); }); } });
+  updateCollectionPreviews();
+  if (!reducedMotion()) $$('[data-col-card]').filter(el=>el.offsetParent).forEach(el=>{
+    const before=previousHeights.get((el.closest('#drawer')?'drawer:':'page:')+el.dataset.colCard), after=el.getBoundingClientRect().height;
+    if(before && Math.abs(before-after)>1) el.animate([{height:before+'px'},{height:after+'px'}],{duration:280,easing:'cubic-bezier(.22,1,.36,1)'});
+  });
   $('.dr-body', d).scrollTop = scroll;
-  if (state.renaming) { const i = $('[data-form="rename"] input', d); if (i) { i.focus(); i.select(); } }
+  if (state.renaming) { const i = $('[data-form="rename"] input', pageActive ? $('#view-collections') : d); if (i) { i.focus(); i.select(); } }
 }
 function drawerItem(c) {
   const open = state.open.has(c.id);
-  return `<section class="ci">
-    <button class="ci-head" data-action="ci-toggle" data-id="${c.id}" aria-expanded="${open}"><span class="ci-name">${esc(c.name)}</span><span class="ci-count">${colSummary(c)}</span>${ICON.chev}</button>
-    ${open ? `<div class="ci-body">
+  return `<section class="ci" data-col-card="${c.id}" data-collection-layout="${c.preview.layout}" data-marker-color="${c.marker.color}" style="--collection-cols:${c.preview.columns==='auto'?'2':c.preview.columns}">
+    <button class="ci-head" data-action="ci-toggle" data-id="${c.id}" aria-expanded="${open}"><span class="collection-marker" aria-label="${c.marker.color!=='none'?COL_COLORS[c.marker.color]+' marker':''}">${c.marker.icon==='none'?'':COL_ICONS[c.marker.icon]}</span><span class="ci-name">${esc(c.name)}</span><span class="ci-count">${colSummary(c)}</span>${ICON.chev}</button>
+    ${open ? `<div class="ci-body">${desktop.collectionButtons(c)}${collectionPreviewControls(c)}
       ${state.renaming === c.id ? `<form class="inline-new" data-form="rename" data-id="${c.id}"><input type="text" value="${esc(c.name)}" aria-label="Collection name" maxlength="60"><button class="btn sm primary" type="submit">Save</button></form>` : ''}
-      ${c.fonts.length ? `<p class="ci-sub">Fonts</p>${c.fonts.map(s => { const f = BY[s]; return `<div class="ci-row"><a href="#/font/${s}" style="font-family:${fam(f)};font-weight:${pvWeight(f)}">${esc(f.n)}</a><button class="ib" data-action="ci-rmfont" data-id="${c.id}" data-slug="${s}" aria-label="Remove ${esc(f.n)}" title="Remove">${ICON.x}</button></div>`; }).join('')}` : ''}
-      ${c.pairs.length ? `<p class="ci-sub">Pairings</p>${c.pairs.map((p, pi) => { const h = BY[p.h], b = BY[p.b]; return `<div class="ci-row"><button class="ci-pair" data-action="openpair" data-col="${c.id}" data-idx="${pi}" data-h="${p.h}" data-b="${p.b}" title="Open in the pairing builder"><span class="h" style="font-family:${fam(h)};font-weight:${pairHW(p)}">${esc(h.n)}</span><span class="b">with ${esc(b.n)}</span></button><button class="ib" data-action="ci-rmpair" data-id="${c.id}" data-h="${p.h}" data-b="${p.b}" aria-label="Remove ${esc(h.n)} and ${esc(b.n)} pairing" title="Remove">${ICON.x}</button></div>`; }).join('')}` : ''}
+      ${c.fonts.length ? `<p class="ci-sub">Fonts</p><div class="collection-items">${c.fonts.map(s => { const f = BY[s]; return `<div class="ci-row"><a class="collection-font-link" href="#/font/${s}"><span class="collection-font-label" data-preview-label="${c.id}">${esc(f.n)}</span>${f.manual?'<span class="manual-badge">Manually added · licence unverified</span>':''}<span class="collection-specimen" data-col-preview data-col="${c.id}" data-font="${s}" style="font-family:${fam(f)};font-weight:${pvWeight(f)}">${esc(collectionPreviewText(c,f))}</span></a><button class="ib" data-action="ci-rmfont" data-id="${c.id}" data-slug="${s}" aria-label="Remove ${esc(f.n)}" title="Remove">${ICON.x}</button></div>`; }).join('')}</div>` : ''}
+      ${c.pairs.length ? `<p class="ci-sub">Pairings</p><div class="collection-items">${c.pairs.map((p, pi) => { const h = BY[p.h], b = BY[p.b]; return `<div class="ci-row"><button class="ci-pair" data-action="openpair" data-col="${c.id}" data-idx="${pi}" data-h="${p.h}" data-b="${p.b}" title="Open in the pairing builder"><span class="collection-font-label" data-preview-label="${c.id}">${esc(h.n)} + ${esc(b.n)}</span>${h.manual||b.manual?'<span class="manual-badge">Includes manually added fonts · verify licences</span>':''}<span class="h collection-specimen" data-col-preview data-col="${c.id}" data-font="${h.slug}" style="font-family:${fam(h)};font-weight:${pairHW(p)}">${esc(collectionPreviewText(c,h))}</span><span class="b collection-specimen" data-col-preview data-col="${c.id}" data-font="${b.slug}" style="font-family:${fam(b)}">${esc(collectionPreviewText(c,b))}</span></button><button class="ib" data-action="ci-rmpair" data-id="${c.id}" data-h="${p.h}" data-b="${p.b}" aria-label="Remove ${esc(h.n)} and ${esc(b.n)} pairing" title="Remove">${ICON.x}</button></div>`; }).join('')}</div>` : ''}
       ${!c.fonts.length && !c.pairs.length ? `<p class="ci-empty">${c.fixed ? 'Tap the heart on a font, or save a pairing here.' : 'Use the save button on any font or pairing to add it here.'}</p>` : ''}
       <div class="ci-acts">
         ${c.fonts.length ? `<button class="btn sm" data-action="ci-show" data-id="${c.id}">Show in library</button>` : ''}
@@ -990,8 +1103,8 @@ function renderFont(f) {
         <h1 class="detail-name" style="font-family:${fam(f)};font-weight:${pvWeight(f)}">${esc(f.n)}</h1>
         <p class="detail-blurb">${esc(f.b)}</p>
         <div class="actions">
-          <a class="btn primary" href="${f.gf}" target="_blank" rel="noopener">${ICON.get} Download from Google Fonts</a>
-          <a class="btn" href="${f.fs}" target="_blank" rel="noopener">Fontsource</a>
+          ${desktop.enabled ? desktop.buttons(f) : f.manual?`<a class="btn" href="#/local">Local details</a>` : `<a class="btn primary" href="${f.gf}" target="_blank" rel="noopener">${ICON.get} Download from ${SOURCES[f.source]}</a>`}
+          ${f.source === 'google' ? `<a class="btn" href="${f.fs}" target="_blank" rel="noopener">Fontsource</a>` : ''}
           ${f.src ? `<a class="btn" href="${f.src}" target="_blank" rel="noopener">Source files</a>` : ''}
           <button class="btn" data-action="fav" data-slug="${f.slug}" aria-pressed="${isFav(f.slug)}">${ICON.heart} Favourite</button>
           <button class="btn" data-action="save" data-kind="font" data-slug="${f.slug}">${ICON.save} Save</button>
@@ -999,13 +1112,14 @@ function renderFont(f) {
       </div>
       <aside class="panel info" aria-label="About this font">
         <dl>
-          <dt>Designer</dt><dd>${esc(f.d)}</dd>
+          <dt>Source</dt><dd>${SOURCES[f.source]}</dd>
+          <dt>${f.source === 'fontsource' ? 'Attribution' : 'Designer'}</dt><dd>${esc(f.d)}</dd>
           <dt>Publisher</dt><dd>${esc(f.p)}</dd>
           ${f.y ? `<dt>Added to catalog</dt><dd>${f.y}</dd>` : ''}
           <dt>Classification</dt><dd>${kindLabel(f)}</dd>
           <dt>Styles</dt><dd>${f.v ? 'Variable, weights ' + f.w[0] + ' to ' + f.w[f.w.length - 1] : f.w.map(w => WNAME[w]).join(', ')}</dd>
-          <dt>Licence</dt><dd><a href="${/Apache/.test(f.lic) && !/OFL/.test(f.lic) ? 'https://www.apache.org/licenses/LICENSE-2.0' : /Ubuntu/.test(f.lic) ? 'https://ubuntu.com/legal/font-licence' : 'https://openfontlicense.org'}" target="_blank" rel="noopener">${esc(f.lic)}</a></dd>
-          <dt>Install</dt><dd><code>npm i @fontsource/${f.slug}</code></dd>
+          <dt>Licence</dt><dd>${f.manual?'<span class="manual-badge">Manually added · licence unverified</span> Verify usage rights yourself. This font may not be open-source.':''}<a ${f.manual?'hidden':''} href="${f.licenseUrl || (/Apache/.test(f.lic) && !/OFL/.test(f.lic) ? 'https://www.apache.org/licenses/LICENSE-2.0' : /Ubuntu/.test(f.lic) ? 'https://ubuntu.com/legal/font-licence' : 'https://openfontlicense.org')}" target="_blank" rel="noopener">${esc(f.lic)}</a></dd>
+          ${!f.manual?`<dt>Install</dt><dd><code>npm i @fontsource/${f.fontsourceId || f.slug}</code></dd>`:''}
         </dl>
         <div class="tagrow"><b>Good for</b><div class="tags">${f.u.map(u => `<button class="btn sm" data-action="filterto" data-group="use" data-val="${u}">${USES[u]}</button>`).join('')}</div></div>
         <div class="tagrow"><b>Feeling</b><div class="tags">${f.t.filter(t => FEEL.includes(t)).map(t => `<button class="btn sm" data-action="filterto" data-group="feel" data-val="${t}">${THEMES[t]}</button>`).join('')}</div></div>
@@ -1064,8 +1178,8 @@ function applyBuilderStyles() {
   const pr = state.pair; const {h, b, hw, bw} = builderWeights();
   loadFont(h, [hw], pr.hs.i); loadFont(b, [bw], pr.bs.i);
   const ph = $('#b-ph'), pb = $('#b-pb'); if (!ph) return;
-  Object.assign(ph.style, { fontFamily:fam(h), fontWeight:hw, fontStyle:pr.hs.i ? 'italic' : 'normal', fontSize:`min(${pr.hs.size}px, 13vw)`, letterSpacing:pr.hs.ls + 'em', textTransform:pr.hs.up ? 'uppercase' : 'none' });
-  Object.assign(pb.style, { fontFamily:fam(b), fontWeight:bw, fontStyle:pr.bs.i ? 'italic' : 'normal', fontSize:pr.bs.size + 'px', lineHeight:pr.bs.lh });
+  Object.assign(ph.style, { fontFamily:familyCSS(h), fontWeight:hw, fontStyle:pr.hs.i ? 'italic' : 'normal', fontSize:`min(${pr.hs.size}px, 13vw)`, letterSpacing:pr.hs.ls + 'em', textTransform:pr.hs.up ? 'uppercase' : 'none' });
+  Object.assign(pb.style, { fontFamily:familyCSS(b), fontWeight:bw, fontStyle:pr.bs.i ? 'italic' : 'normal', fontSize:pr.bs.size + 'px', lineHeight:pr.bs.lh });
   $$('#adjust output[data-for]').forEach(o => { const [side, k] = o.dataset.for.split('.'); const v = pr[side][k]; o.textContent = k === 'size' ? v + 'px' : k === 'ls' ? (v > 0 ? '+' : '') + v.toFixed(2) + 'em' : v.toFixed(2); });
   store.set('pair', state.pair);
 }
@@ -1165,22 +1279,35 @@ function showImportBanner(encoded) {
 
 /* ---------- routing ---------- */
 let lastKey = null;
+let pageTransition, routeHash;
 function route() {
+  const changed=routeHash!==undefined && routeHash!==location.hash;
+  routeHash=location.hash;
+  pageTransition?.skipTransition();
+  if (changed && !reducedMotion() && document.startViewTransition) {
+    pageTransition=document.startViewTransition(renderRoute);
+    pageTransition.finished.catch(()=>{});
+  } else { renderRoute(); if(changed) enterMotion($('main > section:not([hidden])')); }
+}
+function renderRoute() {
   closePop();
+  closeDrawer();
+  setNavOpen(false);
   const parts = location.hash.replace(/^#\/?/, '').split('/');
   let page = parts[0] || 'library';
   if (page === 'import') { showImportBanner(parts.slice(1).join('/')); history.replaceState(null, '', location.href.split('#')[0] + '#/'); page = 'library'; }
   if (page === 'font' && !available(BY[parts[1]])) page = 'library';
-  if (!['library', 'pairings', 'font', 'about', 'local', 'knowledge'].includes(page)) page = 'library';
-  $$('main > section').forEach(s => { s.hidden = true; });
+  if (!['library', 'pairings', 'font', 'about', 'local', 'knowledge', 'collections'].includes(page)) page = 'library';
+  $$('main > section').forEach(s => { s.hidden = s.id !== 'view-'+page; });
   document.body.dataset.page = page;
   const navPage = page === 'font' ? 'library' : page;
   $$('.nav a').forEach(a => { if (a.dataset.nav === navPage) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   if (page === 'library') { $('#view-library').hidden = false; renderLibrary(); document.title = 'Open Shelf: Open Source Font Library'; }
-  if (page === 'pairings') { $('#view-pairings').hidden = false; renderPairings(); }
+  if (page === 'pairings') { $('#view-pairings').hidden = false; const local=F.filter(available); if (!available(BY[state.pair.h]) || !available(BY[state.pair.b])) { if(local.length)state.pair=normPS({h:local[0].slug,b:(local[1]||local[0]).slug}); } if(local.length)renderPairings();else $('#view-pairings').innerHTML='<header class="page-head"><h1>Pairings</h1><p>Download fonts before using pairings offline.</p></header>'; }
   if (page === 'font') { $('#view-font').hidden = false; renderFont(BY[parts[1]]); }
-  if (page === 'local') { $('#view-local').hidden = false; window.OpenShelfLocal.show(); }
+  if (page === 'local') { $('#view-local').hidden = false; if(desktop.enabled)desktop.showLocal();else window.OpenShelfLocal.show(); }
   if (page === 'knowledge') { $('#view-knowledge').hidden = false; window.OpenShelfKnowledge.show(); }
+  if (page === 'collections') { $('#view-collections').hidden = false; if (lastKey !== 'collections') state.cols.forEach(c => state.open.add(c.id)); renderDrawer(); document.title = 'Collections | Open Shelf'; }
   if (page === 'about') { $('#view-about').hidden = false; renderAbout(); }
   const key = page + (parts[1] || '');
   if (key !== lastKey) window.scrollTo(0, 0);
@@ -1196,7 +1323,7 @@ function renderMadeBy() { $('#made-by').innerHTML = `<span>Made by <span class="
 function renderAbout() {
   const designers = new Set(F.map(f => f.p)).size;
   const lic = {}; F.forEach(f => { lic[f.lic] = (lic[f.lic] || 0) + 1; });
-  const licLinks = { 'SIL Open Font License 1.1':'https://openfontlicense.org', 'Apache License 2.0':'https://www.apache.org/licenses/LICENSE-2.0', 'Ubuntu Font Licence 1.0':'https://ubuntu.com/legal/font-licence', 'Open-source licence — see source':'https://fonts.google.com' };
+  const licLinks = { 'SIL Open Font License 1.1':'https://openfontlicense.org', 'Apache License 2.0':'https://www.apache.org/licenses/LICENSE-2.0', 'Ubuntu Font Licence 1.0':'https://ubuntu.com/legal/font-licence', 'Open-source licence — see source':'https://fonts.google.com', 'MIT License':'https://opensource.org/license/mit', 'CC0 1.0 Universal':'https://creativecommons.org/publicdomain/zero/1.0/', 'The Unlicense':'https://unlicense.org/' };
   const byLic = k => F.filter(f => f.lic === k).map(f => f.n);
   $('#view-about').innerHTML = `
     <header class="page-head"><h1>About Open Shelf</h1>
@@ -1204,9 +1331,9 @@ function renderAbout() {
     <div class="about-body">
       <h2 class="sec">What this is</h2>
       <p class="about-lede">I created Open Shelf as an all-in-one tool for open-source typefaces, so you can find, preview and pair fonts without having to go through several websites.</p>
-      <p>Open Shelf collects ${F.length} open-source typefaces from ${designers} designers and foundries, so you can try them with your own words, find pairs that work, and keep shortlists for your projects.</p>
-      <p>Every font here can be downloaded for free and used in personal and commercial work, including websites, apps, print, logos and video. Each font page links to Google Fonts, Fontsource and, where available, the designer\u2019s own source files.</p>
-      <p>Open Shelf doesn\u2019t host or sell fonts. Previews load straight from Google Fonts, and downloads come from those original sources.</p>
+      <p>Open Shelf collects ${F.filter(f=>!f.manual).length} open-source typefaces from ${designers} designers and foundries, so you can try them with your own words, find pairs that work, and keep shortlists for your projects.</p>
+      <p>Every font here can be downloaded for free and used in personal and commercial work, including websites, apps, print, logos and video. Each font page identifies its catalog source, licence and available source files.</p>
+      <p>${desktop.enabled?'Open Shelf downloads font files directly from their open-source repositories or Fontsource’s versioned CDN and saves the licence notices with them. Enable downloaded fonts to use them in other applications while Open Shelf is running.':'Open Shelf doesn’t host or sell fonts. Previews load from Google Fonts or Fontsource’s versioned jsDelivr files, and download links lead to the corresponding source.'}</p>
 
       <h2 class="sec">What \u201copen source\u201d means for fonts</h2>
       <p>Most fonts in the library use the SIL Open Font License (OFL), a licence written specifically for typefaces. In plain terms:</p>
@@ -1234,14 +1361,14 @@ function renderAbout() {
       <h2 class="sec">How to use it</h2>
       <p><strong>Library.</strong> Type anything in the preview box and every font shows your words. Filter by feeling, appearance, classification and use case on the left. Within a section, filters match all your picks by default; switch a section to \u201cMatch any\u201d to widen it. Each row has its own weight and italic controls, and \u201cWeight and style\u201d changes them all at once.</p>
       <p><strong>Pairings.</strong> Pick a heading and body font, adjust weight, size, spacing and case, or press Randomise with optional rules. Below the builder are recommended pairings, labelled by their basis, with linked sources for published recommendations, community discussions and award inspiration. Award-inspired choices are Open Shelf interpretations, not claims that the winning site uses these exact fonts.</p>
-      <p><strong>Collections.</strong> Save fonts and pairings into named collections from anywhere on the site. Each collection can give you ready-made embed code, be exported as a file, or be shared as a link.</p>
+      <p><strong>Collections.</strong> Save fonts and pairings into named collections from anywhere on the site. Manage the same saved items on the Collections page or in the side panel. Preview font names, use shared page text, or save custom preview text for each collection. Each collection can give you ready-made embed code, be exported as a file, or be shared as a link.</p>
 
       <h2 class="sec">About the information</h2>
-      <p>Font membership, designers, styles and dates are refreshed weekly from Google Fonts. Dates for newly added records refer to their addition to the Google Fonts catalog, not necessarily their original release. Removed families disappear on the next successful refresh, and failed previews are hidden for the current visit with an option to retry. Classifications, feelings and use cases are editorial judgements meant to help you browse, not official categories. Pairing notes draw on widely shared typographic advice. If something looks wrong, check the font\u2019s Google Fonts page or source repository, which are the authority.</p>
+      <p>Google Fonts membership, designers, styles and dates are refreshed weekly. Additional families come from Fontsource’s public repository after checking their licence files and preview availability. Use the Source filter to browse either catalog. Dates for newly added records refer to their addition to the Google Fonts catalog, not necessarily their original release. Removed families disappear on the next successful refresh, and failed previews are hidden for the current visit with an option to retry. Classification and feeling labels combine the scored Google Fonts tag dataset with Open Shelf’s editorial annotations. Only family-wide source tags scoring at least 50 are included. Suggested uses remain editorial starting points. Pairing notes draw on widely shared typographic advice. If something looks wrong, check the font\u2019s Google Fonts page or source repository, which are the authority.</p>
 
-      <h2 class="sec">Local Fonts and Knowledge</h2><p>Local font files and their editable descriptions, categories and notes are stored in this browser using IndexedDB. They are not uploaded. Use Export collection to save your font files and their details before clearing browser data. Import collection restores that file in another browser or on another device. Your own font licences apply to imported files.</p><p>The Knowledge library is a searchable directory of Google Fonts Knowledge articles. Each card links to the original article on Google Fonts. Excerpts and thumbnails retain author credits and are shared under <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>, with <a href="https://github.com/google/fonts/tree/main/cc-by-sa/knowledge">source material on GitHub</a>. Weekly refreshes update the directory; failed updates preserve the previous snapshot. GitHub may pause scheduled workflows after 60 days of repository inactivity; they can be re-enabled from Actions.</p>
-      <h2 class="sec">Privacy</h2>
-      <p>Your preview text, settings and collections are stored only in this browser. There are no accounts. Font previews are loaded from Google Fonts, so your browser contacts Google\u2019s servers to fetch them, as it would on any site that uses Google Fonts.</p>
+      <h2 class="sec">Local Fonts and Knowledge</h2>${desktop.enabled?'<p>Downloaded and imported TTF/OTF fonts are stored on this computer. You can edit their details, export the files and metadata, and enable individual fonts or saved collections. Offline mode shows downloaded and installed fonts and stops remote previews. Fonts installed outside Open Shelf remain under your operating system’s control. The desktop catalog updates with the application. Check for updates downloads signed releases when available.</p>':''}<p ${desktop.enabled?'hidden':''}>Local font files and their editable descriptions, categories and notes are stored in this browser using IndexedDB. They are not uploaded. Use Export collection to save your font files and their details before clearing browser data. Import collection restores that file in another browser or on another device. Your own font licences apply to imported files.</p><p>The Knowledge library is a searchable directory of Google Fonts Knowledge articles. Each card links to the original article on Google Fonts. Excerpts and thumbnails retain author credits and are shared under <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>, with <a href="https://github.com/google/fonts/tree/main/cc-by-sa/knowledge">source material on GitHub</a>. Weekly refreshes update the directory; failed updates preserve the previous snapshot. GitHub may pause scheduled workflows after 60 days of repository inactivity; they can be re-enabled from Actions.</p>
+      <h2 class="sec">Privacy</h2>${desktop.enabled?'<p>Your preview text, settings, collections and font files stay on this computer. There are no accounts or uploads. Online previews and downloads contact Google Fonts, GitHub or jsDelivr; update checks contact GitHub Releases. Offline mode uses local files.</p>':''}
+      <p ${desktop.enabled?'hidden':''}>Your preview text, settings and collections are stored only in this browser. There are no accounts. Public font previews contact Google Fonts or jsDelivr, depending on the family’s source. Imported Local Fonts are loaded from your browser’s storage.</p>
 
       <h2 class="sec">Credits</h2>
       <p>Open Shelf was designed and built by <strong>${esc(AUTHOR.name)}</strong>.${AUTHOR.github || AUTHOR.portfolio ? ` Find more work on ${[AUTHOR.github ? `<a href="${AUTHOR.github}" target="_blank" rel="noopener">GitHub</a>` : '', AUTHOR.portfolio ? `<a href="${AUTHOR.portfolio}" target="_blank" rel="noopener">the portfolio site</a>` : ''].filter(Boolean).join(' and ')}.` : ''}</p>
@@ -1270,12 +1397,13 @@ document.addEventListener('click', e => {
     case 'unfilter': { const g = t.dataset.group; if (g === 'exactw') state.exactW = false; else if (g === 'col') state.col = null; else if (state.f[g]) state.f[g].delete(t.dataset.val); refilter(); break; }
     case 'clear': clearFilters(); refilter(); break;
     case 'filterto': { clearFilters(); const g = t.dataset.group === 'cls' ? t.dataset.val.split(':')[0] : t.dataset.group; state.f[g].add(t.dataset.val); } if (location.hash === '#/' || location.hash === '') renderLibrary(); else location.hash = '#/'; break;
-    case 'fav': { const s = t.dataset.slug; setFont('favs', s); refreshFav(s); toast(isFav(s) ? `Added ${BY[s].n} to Favourites` : `Removed ${BY[s].n} from Favourites`); afterColChange(); break; }
+    case 'fav': { const s = t.dataset.slug; setFont('favs', s); refreshFav(s); pulse(t); toast(isFav(s) ? `Added ${BY[s].n} to Favourites` : `Removed ${BY[s].n} from Favourites`); afterColChange(); break; }
     case 'save': {
       if (!p.hidden && p._anchor === t) { closePop(); break; }
       const item = t.dataset.kind === 'font' ? {kind:'font', slug:t.dataset.slug} : t.dataset.current ? Object.assign({kind:'pair'}, clonePair(state.pair)) : {kind:'pair', h:t.dataset.h, b:t.dataset.b};
       openSaveMenu(t, item); break;
     }
+    case 'preview-all': state.cols.forEach(c => c.preview.mode = 'page'); saveCols(); renderDrawer(); toast('All collections now use the page preview text'); break;
     case 'drawer': drawerOpen() ? closeDrawer() : openDrawer(); break;
     case 'drawer-close': closeDrawer(); break;
     case 'ci-toggle': { const id = t.dataset.id; state.open.has(id) ? state.open.delete(id) : state.open.add(id); renderDrawer(); break; }
@@ -1291,8 +1419,8 @@ document.addEventListener('click', e => {
       else { t.dataset.confirm = '1'; t.textContent = 'Confirm delete'; }
       break;
     }
-    case 'import-toggle': state.importOpen = !state.importOpen; renderDrawer(); if (state.importOpen) $('#import-text').focus(); break;
-    case 'import-paste': { const v = $('#import-text').value.trim(); if (!v) { $('#import-text').focus(); toast('Paste the JSON first'); break; } if (importText(v)) { state.importOpen = false; renderDrawer(); afterColChange(); } break; }
+    case 'import-toggle': { const scope = t.closest('#drawer') ? '#drawer' : '#view-collections'; state.importOpen = !state.importOpen; renderDrawer(); if (state.importOpen) $(scope+' [data-collection-import]').focus(); break; }
+    case 'import-paste': { const input = $('[data-collection-import]', t.closest('.collection-manager')); const v = input.value.trim(); if (!v) { input.focus(); toast('Paste the JSON first'); break; } if (importText(v)) { state.importOpen = false; renderDrawer(); afterColChange(); } break; }
     case 'import-file': $('#file-in').click(); break;
     case 'export-all': download('open-shelf-collections.json', JSON.stringify(exportObj(state.cols), null, 2)); break;
     case 'copy-all': copyText(JSON.stringify(exportObj(state.cols), null, 2), 'All collections copied as JSON'); break;
@@ -1330,6 +1458,26 @@ document.addEventListener('change', e => {
     fr.readAsText(t.files[0]);
   }
 });
+document.addEventListener('input', e => {
+  if (e.target.matches('[data-preview-page]')) {
+    state.collectionText=e.target.value.slice(0,500); store.set('collectionText',state.collectionText);
+    $$('[data-preview-page]').forEach(i=>{if(i!==e.target)i.value=state.collectionText;}); updateCollectionPreviews();
+  }
+  if (e.target.matches('[data-preview-custom]')) { const c=getCol(e.target.dataset.previewCustom); c.preview.text=e.target.value.slice(0,500); saveCols(); updateCollectionPreviews(); }
+});
+document.addEventListener('change',e=>{
+ const t=e.target;if(!t.matches('[data-collection-setting],[data-marker]'))return;
+ const c=getCol(t.dataset.col);if(!c)return;
+ if(t.dataset.marker)c.marker=cleanMarker({...c.marker,[t.dataset.marker]:t.value});
+ else c.preview=cleanCollectionPreview({...c.preview,[t.dataset.collectionSetting]:t.value});
+ saveCols();const y=scrollY;renderDrawer();window.scrollTo({top:y,behavior:'instant'});
+});
+document.addEventListener('change', e => {
+  if (!e.target.matches('[data-preview-mode]')) return;
+  const scope=e.target.closest('#drawer')?'#drawer':'#view-collections', id=e.target.dataset.previewMode;
+  getCol(id).preview.mode=e.target.value; saveCols(); renderDrawer();
+  const input=$(scope+' [data-preview-custom="'+id+'"]') || $(scope+' [data-preview-mode="'+id+'"]'); input?.focus();
+});
 document.addEventListener('submit', e => {
   const form = e.target.closest('[data-form]'); if (!form) return;
   e.preventDefault();
@@ -1342,14 +1490,15 @@ document.addEventListener('submit', e => {
     toast(`Created \u201c${c.name}\u201d and saved ${item.kind === 'font' ? BY[item.slug].n : 'the pairing'}`);
     closePop(true); afterColChange(); return;
   }
-  if (kind === 'dr-new') { const c = newCollection(inp.value); if (!c) { inp.focus(); return; } state.open.add(c.id); toast(`Created \u201c${c.name}\u201d`); renderDrawer(); $('#drawer [data-form="dr-new"] input').focus(); }
+  if (kind === 'dr-new') { const scope = form.closest('#drawer') ? '#drawer' : '#view-collections'; const c = newCollection(inp.value); if (!c) { inp.focus(); return; } state.open.add(c.id); toast(`Created \u201c${c.name}\u201d`); renderDrawer(); $(scope+' [data-form="dr-new"] input').focus(); }
 });
 document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && $('#nav-toggle').getAttribute('aria-expanded') === 'true') { setNavOpen(false); $('#nav-toggle').focus(); return; }
   if (e.key === 'Escape') { if ($('#fpanel').classList.contains('on')) closeFPanel(); else if (!pop().hidden) closePop(true); else if (drawerOpen()) closeDrawer(); else if (!$('#banner').hidden) $('#banner').hidden = true; }
   const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
   if (e.key === '/' && !typing) { e.preventDefault(); $('#proof-input').focus(); }
   if (e.key === 'Tab' && drawerOpen()) {
-    const f = $$('#drawer button, #drawer a, #drawer input, #drawer textarea').filter(x => !x.disabled && x.offsetParent !== null);
+    const f = $$('#drawer button, #drawer a, #drawer input, #drawer textarea, #drawer select').filter(x => !x.disabled && x.offsetParent !== null);
     if (f.length) { if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); } }
   }
 });
@@ -1369,6 +1518,8 @@ $('#theme-btn').addEventListener('click', () => { const r = document.documentEle
 (() => { const t = store.get('theme', 'dark'); document.documentElement.dataset.theme = t === 'light' ? 'light' : 'dark'; })();
 
 /* ---------- boot ---------- */
+window.OpenShelfLocal.connect(syncLocalRegistry);
+desktop.connect({toast,collection:getCol,collections:()=>state.cols,refresh:()=>{syncLocalRegistry();loaded.clear();unavailable.clear();$('#font-status').hidden=true;route();}});
 setupProof();
 renderMadeBy();
 $('#last-updated').classList.add('meta-row');

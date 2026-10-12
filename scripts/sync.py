@@ -13,6 +13,8 @@ import tempfile
 import time
 import urllib.parse
 import urllib.request
+from fontsource_catalog import fontsource_catalog
+from font_labels import parse_labels
 
 ROOT = Path(__file__).resolve().parent.parent
 CACHE = ROOT / '.cache'
@@ -133,12 +135,22 @@ def main():
     metadata_bytes = fetch('https://fonts.google.com/metadata/fonts')
     metadata = json.loads(metadata_bytes[metadata_bytes.index(b'{'):])
     fonts = catalog(metadata, licenses, commit)
+    labels = parse_labels(fetch(f"https://raw.githubusercontent.com/google/fonts/{commit}/tags/all/families.csv").decode())
+    for font in fonts:
+        if font["n"] in labels: font["labels"] = labels[font["n"]]
+    extra = fontsource_catalog(fetch, fonts)
+    old_extra = ROOT/'data/fontsource.json'
+    if old_extra.exists() and len(extra['fonts']) < len(json.loads(old_extra.read_text())['fonts']) * .9:
+        raise ValueError('Fontsource catalog shrank by over 10%; review before publishing')
+    extra['updatedAt'] = now
     # Build the full snapshot before replacing any public files.
     with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
         stage=Path(tmp)
         assets=stage/'knowledge-assets'
         index=knowledge_index(files,assets,commit,license_text)
         data=stage/'data';data.mkdir()
+        (data/'fontsource.json').write_text(json.dumps(extra,ensure_ascii=False,separators=(',',':'))+'\n')
+        (data/'fontsource.js').write_text(js('OPEN_SHELF_FONTSOURCE',extra))
         cat={'updatedAt':now,'sourceCommit':commit,'fonts':fonts}
         (data/'catalog.json').write_text(json.dumps(cat,ensure_ascii=False,separators=(',',':'))+'\n')
         (data/'catalog.js').write_text(js('OPEN_SHELF_CATALOG',cat))
@@ -149,6 +161,6 @@ def main():
         shutil.move(str(assets),ROOT/'knowledge-assets')
         for p in data.iterdir(): shutil.copyfile(p,ROOT/'data'/p.name)
         (ROOT/'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>'+SITE+'</loc><lastmod>'+now+'</lastmod></url></urlset>\n')
-    print(f'Synced {len(fonts)} fonts and {len(index)} external article links at {commit}')
+    print(f'Synced {len(fonts)} Google Fonts + {len(extra["fonts"])} Fontsource families and {len(index)} external article links at {commit}')
 
 if __name__=='__main__': main()

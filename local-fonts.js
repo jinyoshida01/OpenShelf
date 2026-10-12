@@ -5,7 +5,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const cats = {sans:'Sans serif',serif:'Serif',slab:'Slab serif',mono:'Monospace',display:'Display',script:'Script'};
 const useOptions = ['Body text','Headlines','Interfaces & apps','Long-form reading','Editorial & magazines','Branding & logos','Posters & signage','Code & terminals','Data & dashboards','Accessibility','Invitations & cards','Packaging & labels'];
 const feelOptions = ['Business','Calm','Modern','Classic','Sophisticated','Fancy','Friendly','Playful','Vintage','Loud','Technical','Quirky'];
-let dbPromise, records=[], faces=new Map(), query='', category='', editing=null, notice='', failed=new Set(), booted=false;
+let dbPromise, records=[], faces=new Map(), query='', category='', editing=null, notice='', failed=new Set(), booted=false, change=()=>{};
 const container = () => document.querySelector('#view-local');
 function db() {
   if (!dbPromise) dbPromise = new Promise((resolve,reject) => {
@@ -25,6 +25,7 @@ async function transaction(mode, action) {
   });
 }
 async function install(record) {
+  if(faces.has(record.id))return;
   const face=new FontFace('local_'+record.id, record.bytes, {weight:String(record.weight||400),style:record.style||'normal'});
   await face.load();
   const previous=faces.get(record.id);if(previous)document.fonts.delete(previous);
@@ -33,7 +34,7 @@ async function install(record) {
 async function ready() {
   if(booted)return;
   records=await transaction('readonly',s=>s.getAll());
-  await Promise.all(records.map(async r=>{try{await install(r);}catch(e){failed.add(r.id);}}));
+
   booted=true;
 }
 function previewText(){return document.querySelector('#proof-input').value || 'Sphinx of black quartz, judge my vow.';}
@@ -52,15 +53,17 @@ function editor(r){return `<form id="local-editor" class="local-editor"><h2>Edit
 ${checks('Uses',useOptions,r.uses)}${checks('Feelings',feelOptions,r.feelings)}
 <p class="meta">Weight and style describe this imported file; they do not add styles to it.</p>
 <div class="actions"><button class="btn primary" type="submit">Save details</button><button class="btn" type="button" data-local-action="cancel">Cancel</button></div></form>`;}
-function card(r){return `<article class="local-card"><div class="font-head"><h2>${esc(r.name)}</h2><span class="meta">${cats[r.category]||'Uncategorised'} · ${r.weight||400} ${esc(r.style||'normal')}</span></div><p class="local-preview" data-local-preview style="font-family:local_${r.id};font-weight:${r.weight||400};font-style:${r.style||'normal'}">${esc(previewText())}</p><p>${esc(r.description||'Add a description to make this font easier to find.')}</p><dl class="local-details">${[['Designer',r.designer],['Publisher',r.publisher],['Year',r.year],['Licence',r.license],['Uses',(r.uses||[]).join(', ')],['Feeling',(r.feelings||[]).join(', ')],['Tags',r.tags]].filter(x=>x[1]).map(([k,v])=>`<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl><p class="meta">${esc(r.filename)} · ${(r.bytes.byteLength/1024).toFixed(0)} KB</p><div class="actions"><button class="btn sm" data-local-action="edit" data-id="${r.id}">Edit details</button><button class="btn sm" data-local-action="download" data-id="${r.id}">Download file</button><button class="btn sm quiet" data-local-action="delete" data-id="${r.id}">Remove</button></div></article>`;}
-function list(){
-  const q=query.toLowerCase().trim();const visible=records.filter(r=>!failed.has(r.id)&&(!category||r.category===category)&&(!q||[r.name,r.designer,r.publisher,r.description,r.tags,...(r.uses||[]),...(r.feelings||[])].join(' ').toLowerCase().includes(q)));
+function card(r){return `<article class="local-card"><div class="font-head"><h2>${esc(r.name)}</h2><span class="manual-badge">Manually added · licence unverified</span><span class="meta">${cats[r.category]||'Uncategorised'} · ${r.weight||400} ${esc(r.style||'normal')}</span></div><p class="local-preview" data-local-preview style="font-family:local_${r.id};font-weight:${r.weight||400};font-style:${r.style||'normal'}">${esc(previewText())}</p><p>${esc(r.description||'Add a description to make this font easier to find.')}</p><dl class="local-details">${[['Designer',r.designer],['Publisher',r.publisher],['Year',r.year],['Licence',r.license],['Uses',(r.uses||[]).join(', ')],['Feeling',(r.feelings||[]).join(', ')],['Tags',r.tags]].filter(x=>x[1]).map(([k,v])=>`<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl><p class="meta">${esc(r.filename)} · ${(r.bytes.byteLength/1024).toFixed(0)} KB</p><div class="actions"><button class="btn sm" data-action="save" data-kind="font" data-slug="local-${r.id}">Save to collection</button><button class="btn sm" data-local-action="edit" data-id="${r.id}">Edit details</button><button class="btn sm" data-local-action="download" data-id="${r.id}">Download file</button><button class="btn sm quiet" data-local-action="delete" data-id="${r.id}">Remove</button></div></article>`;}
+function list(){queueMicrotask(observeLocal);
+  const q=query.toLowerCase().trim();const visible=records.filter(r=>!failed.has(r.id)&&(!category||r.category===category)&&(!q||[r.name,r.designer,r.publisher,r.description,r.tags,'manually added licence unverified',...(r.uses||[]),...(r.feelings||[])].join(' ').toLowerCase().includes(q)));
   container().querySelector('#local-count').textContent=`${visible.length} of ${records.length-failed.size} local fonts`;
   container().querySelector('#local-results').innerHTML=visible.length?visible.sort((a,b)=>a.name.localeCompare(b.name)).map(card).join(''):`<div class="empty"><h2>${records.length?'No matching fonts':'No local fonts yet'}</h2><p>${records.length?'Try a different search or category.':'Import font files to preview them and add descriptions, categories and notes.'}</p></div>`;
 }
-function render(){
+const localObserver='IntersectionObserver' in window?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){const r=records.find(r=>e.target.style.fontFamily.includes(r.id));if(r)install(r).catch(()=>{failed.add(r.id);e.target.textContent='Preview unavailable';});localObserver.unobserve(e.target);}}),{rootMargin:'300px'}):null;
+function observeLocal(){document.querySelectorAll('[data-local-preview]').forEach(el=>localObserver?.observe(el));}
+function render(){change();
   const box=container();
-  box.innerHTML=`<header class="page-head"><h1>Local Fonts</h1><p><span class="copy-line">Import TTF, OTF, WOFF or WOFF2 files.</span> <span class="copy-line">Your fonts and notes stay in this browser on this device.</span> <span class="copy-line">Clearing site data removes them; keep your original files.</span></p></header><div class="local-import"><label class="btn primary" for="local-files">Import fonts</label><input class="sr" id="local-files" type="file" multiple accept=".ttf,.otf,.woff,.woff2"><span class="meta">Up to 20 MB per file. Import only files you have permission to use.</span><button class="btn sm" data-local-action="backup" ${records.length?'':'disabled'} aria-describedby="local-export-help">Export collection</button><label class="btn sm" for="local-backup">Import collection</label><input id="local-backup" class="sr" type="file" accept=".json,application/json"></div><p class="meta" id="local-export-help"><span class="copy-line">Export collection saves every font file and its details in one JSON file.</span> <span class="copy-line">Use Import collection to restore it in another browser or on another device.</span></p><p id="local-notice" role="status">${esc(notice)}</p>${failed.size?`<div class="status-note">${failed.size} stored font file(s) could not load and are hidden from search. <button class="linkbtn" data-local-action="retry">Retry loading</button></div>`:''}${editing?editor(records.find(r=>r.id===editing)):`<div class="knowledge-tools"><label class="searchwrap">Search local fonts<input id="local-search" type="search" placeholder="Name, designer, description or tags" value="${esc(query)}"></label><label>Category<select id="local-category" class="sel"><option value="">All categories</option>${Object.entries(cats).map(([k,v])=>`<option value="${k}" ${category===k?'selected':''}>${v}</option>`).join('')}</select></label></div><p class="count" id="local-count"></p><div id="local-results" class="local-grid"></div>`}`;
+  box.innerHTML=`<header class="page-head"><h1>Local Fonts</h1><p><span class="copy-line">Import TTF, OTF, WOFF or WOFF2 files.</span> <span class="copy-line">Your fonts and notes stay in this browser on this device.</span> <span class="copy-line">Clearing site data removes them; keep your original files.</span></p></header><div class="local-import"><label class="btn primary" for="local-files">Import fonts</label><input class="sr" id="local-files" type="file" multiple accept=".ttf,.otf,.woff,.woff2"><span class="meta">Up to 20 MB per file. Manually added fonts may not be open-source. Verify their licence and usage rights yourself before using or sharing them.</span><button class="btn sm" data-local-action="backup" ${records.length?'':'disabled'} aria-describedby="local-export-help">Export collection</button><label class="btn sm" for="local-backup">Import collection</label><input id="local-backup" class="sr" type="file" accept=".json,application/json"></div><p class="meta" id="local-export-help"><span class="copy-line">Export collection saves every font file and its details in one JSON file.</span> <span class="copy-line">Use Import collection to restore it in another browser or on another device.</span></p><p id="local-notice" role="status">${esc(notice)}</p>${failed.size?`<div class="status-note">${failed.size} stored font file(s) could not load and are hidden from search. <button class="linkbtn" data-local-action="retry">Retry loading</button></div>`:''}${editing?editor(records.find(r=>r.id===editing)):`<div class="knowledge-tools"><label class="searchwrap">Search local fonts<input id="local-search" type="search" placeholder="Name, designer, description or tags" value="${esc(query)}"></label><label>Category<select id="local-category" class="sel"><option value="">All categories</option>${Object.entries(cats).map(([k,v])=>`<option value="${k}" ${category===k?'selected':''}>${v}</option>`).join('')}</select></label></div><p class="count" id="local-count"></p><div id="local-results" class="local-grid"></div>`}`;
   if(!editing)list();
 }
 async function show(){document.title='Local Fonts | Open Shelf';try{await ready();render();}catch(e){container().innerHTML='<header class="page-head"><h1>Local Fonts</h1><p>Browser storage is unavailable. Enable site storage or leave private browsing, then reload to import fonts.</p></header>';}}
@@ -94,7 +97,7 @@ document.addEventListener('change',async e=>{
 document.addEventListener('input',e=>{if(e.target.id==='local-search'){query=e.target.value;list();}if(e.target.id==='proof-input')document.querySelectorAll('[data-local-preview]').forEach(x=>x.textContent=previewText());});
 document.addEventListener('submit',async e=>{
   if(e.target.id!=='local-editor')return;e.preventDefault();const r=records.find(x=>x.id===editing);const data=new FormData(e.target);const next={...r};for(const k of ['name','category','designer','publisher','year','license','style','description','tags'])next[k]=String(data.get(k)||'').trim();next.weight=+data.get('weight');next.uses=data.getAll('uses');next.feelings=data.getAll('feelings');
-  try{await transaction('readwrite',s=>s.put(next));await install(next);records[records.indexOf(r)]=next;editing=null;notice='Details saved.';render();}catch(err){container().querySelector('#local-notice').textContent='Could not save details: '+err.message;}
+  try{await transaction('readwrite',s=>s.put(next));document.fonts.delete(faces.get(next.id));faces.delete(next.id);await install(next);records[records.indexOf(r)]=next;editing=null;notice='Details saved.';render();}catch(err){container().querySelector('#local-notice').textContent='Could not save details: '+err.message;}
 });
 document.addEventListener('click',async e=>{
   const b=e.target.closest('[data-local-action]');if(!b)return;const action=b.dataset.localAction;const r=records.find(x=>x.id===b.dataset.id);
@@ -103,11 +106,11 @@ document.addEventListener('click',async e=>{
     if(action==='cancel'){editing=null;render();}
     if(action==='delete'){if(b.dataset.confirm!=='yes'){b.dataset.confirm='yes';b.textContent='Confirm removal';return;}await transaction('readwrite',s=>s.delete(r.id));document.fonts.delete(faces.get(r.id));faces.delete(r.id);records=records.filter(x=>x.id!==r.id);notice='Font removed from this browser.';render();}
     if(action==='download')download(new Blob([r.bytes]),r.filename);
-    if(action==='retry'){booted=false;await show();}
+    if(action==='retry'){booted=false, change=()=>{};await show();}
     if(action==='backup'){
       const fonts=records.map(r=>{let binary='';for(const v of new Uint8Array(r.bytes))binary+=String.fromCharCode(v);const {bytes,...meta}=r;return {...meta,data:btoa(binary)};});download(new Blob([JSON.stringify({format:'openshelf-local-v1',fonts})],{type:'application/json'}),'open-shelf-local-fonts.json');
     }
   }catch(err){notice='Could not complete that action: '+err.message;render();}
 });
-window.OpenShelfLocal={show,updatePreview:()=>document.querySelectorAll('[data-local-preview]').forEach(x=>x.textContent=previewText())};
+window.OpenShelfLocal={catalog:async()=>{await ready();return records;},records:()=>records,connect:fn=>{change=fn;},load:async f=>{const r=records.find(r=>'local-'+r.id===f.slug);if(!r)throw Error('Local font missing');await install(r);},show,updatePreview:()=>document.querySelectorAll('[data-local-preview]').forEach(x=>x.textContent=previewText())};
 })();
