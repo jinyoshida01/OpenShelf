@@ -601,3 +601,34 @@ a,button,select,input,textarea,summary,label{-webkit-tap-highlight-color:transpa
 @media(max-width:900px){.bcontrols{grid-template-columns:minmax(0,1fr)}.bfield,.bfield-row,.bactions{min-width:0}.bactions{flex-wrap:wrap}.bfield select{width:100%}}
 @media(max-width:700px){#prov-seg{display:flex;flex-wrap:wrap;max-width:100%;border-radius:14px;gap:4px}.builder{padding-inline:16px}.adjust{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:700px){.presets{flex-wrap:wrap;overflow:visible;white-space:normal;gap:6px 12px}.presets button{font-size:12px}}
+
+/* Grouped library filters: generous targets, visual categories and width samples. */
+.fp-intro{font-size:12px;line-height:1.5;color:var(--muted);margin:14px 0 2px}
+.fsection-tools{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 12px;min-height:26px}
+.fsection-tools .fmode{margin:0}
+.fsection-clear{font-size:12px;flex:none}
+.fmatch-note{font-size:11px;color:var(--muted)}
+.fchip{height:auto;min-height:36px;padding:7px 10px;max-width:100%;text-align:left}
+.fchip-label{min-width:0;overflow-wrap:anywhere}
+.fchip .c{margin-left:auto;color:var(--muted)}
+.fchip[aria-pressed="true"] .c{color:inherit;opacity:.75}
+.fchips-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.fchips-tiles .fchip{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 3px;border-radius:12px;padding:12px 10px;min-height:78px;align-content:center}
+.fchips-tiles .fag,.width-sample{grid-column:1/-1;justify-self:start;height:24px;font-size:23px;width:42px;text-align:left;line-height:24px}
+.fchips-tiles .fchip-label{font-size:12px}
+.fchips-tiles .c{font-size:10px;min-width:0}
+.width-sample{font-family:var(--ui);font-weight:500;transform-origin:left center}
+.width-condensed{transform:scaleX(.7)}
+.width-wide{transform:scaleX(1.3)}
+.width-adjustable{font-size:29px;font-weight:400}
+.width-unspecified{font-size:19px;color:var(--muted)}
+.fchip[aria-pressed="true"] .width-unspecified{color:inherit}
+.fsection-note{color:var(--muted);font-size:11px;line-height:1.6;margin:0 0 18px}
+.fwriting-label{display:block;color:var(--muted);font-size:12px;margin-bottom:8px}
+#writing-filter{height:42px;border-radius:12px;width:100%;min-width:0;max-width:100%;margin-bottom:12px;outline-offset:-3px}
+@media(max-width:900px){
+ .fchip{min-height:42px}
+ .fchips-tiles .fchip{min-height:80px}
+ .fmode button{min-height:32px}
+ .fsection-clear{min-height:36px}
+}

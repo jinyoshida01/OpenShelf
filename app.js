@@ -22,15 +22,19 @@ const SUBS = {
   'calli:*':'All calligraphy', 'calli:handwritten':'Handwritten', 'calli:informal':'Informal script', 'calli:formal':'Formal script', 'calli:brush':'Brush script'
 };
 const pick = pre => Object.fromEntries(Object.entries(SUBS).filter(([k]) => k.startsWith(pre)));
+const WIDTHS = {condensed:'Condensed', standard:'Standard', wide:'Expanded', adjustable:'Adjustable', unspecified:'Unspecified'};
 const SECTIONS = [
-  {id:'source', set:'source', title:'Source', opts:SOURCES},
+  {id:'category', set:'category', title:'Category', opts:CLS, any:true},
+  {id:'width', set:'width', title:'Width', opts:WIDTHS, any:true, note:'Based on catalog tags and supported width ranges. Fonts without width data are listed as Unspecified. Adjustable families may appear in several widths.'},
+  {id:'writing', set:'writing', title:'Writing system', select:true},
+  {id:'source', set:'source', title:'Source', opts:SOURCES, any:true},
   {id:'feel', set:'feel', title:'Feeling', opts:Object.fromEntries(FEEL.map(k => [k, THEMES[k]]))},
-  {id:'app', set:'app', title:'Appearance', opts:APPEAR},
+  {id:'app', set:'app', title:'Appearance', opts:Object.fromEntries(Object.entries(APPEAR).filter(([k])=>!['condensed','wide'].includes(k)))},
   {id:'serif', set:'serif', title:'Serif', opts:pick('serif:')},
   {id:'sans', set:'sans', title:'Sans serif', opts:pick('sans:')},
   {id:'calli', set:'calli', title:'Calligraphy', opts:pick('calli:')},
   {id:'use', set:'use', title:'Use case', opts:USES},
-  {id:'tech', set:'tech', title:'Technology', opts:{variable:'Variable', color:'Colour font'}}
+  {id:'tech', set:'tech', title:'Font features', opts:{variable:'Variable', color:'Colour font', italic:'Has italic'}}
 ];
 const WNAME = {100:'Thin',200:'ExtraLight',300:'Light',400:'Regular',500:'Medium',600:'SemiBold',700:'Bold',800:'ExtraBold',900:'Black',1000:'ExtraBlack'};
 const FALLBACK = { sans:'system-ui, sans-serif', serif:'Georgia, serif', slab:'Georgia, serif', mono:'ui-monospace, Menlo, monospace', display:'system-ui, sans-serif', script:'cursive' };
@@ -406,11 +410,36 @@ const kindLabel = f => {
   if (k.startsWith('sans:')) return SUBS[k] + ' sans';
   return SUBS[k];
 };
+// A width axis describes supported designs, not the rendered width of a sample.
+// Missing data must not silently classify an unknown font as standard width.
+function fontWidths(f) {
+  const axes=f.axes || [];
+  const axis=Array.isArray(axes)?axes.find(a=>a.tag==='wdth'):axes.wdth;
+  const out=new Set();
+  if(axis && Number.isFinite(Number(axis.min)) && Number.isFinite(Number(axis.max)) && Number(axis.min)>0 && Number(axis.max)>=Number(axis.min)) {
+    const min=Number(axis.min),max=Number(axis.max);
+    if(min<100)out.add('condensed');
+    if(min<=100 && max>=100)out.add('standard');
+    if(max>100)out.add('wide');
+    if(min<max)out.add('adjustable');
+  } else {
+    const tags=f.a || f.labels?.a || [];
+    if(tags.includes('condensed') || /\b(condensed|narrow|compressed)\b/i.test(f.n))out.add('condensed');
+    if(tags.includes('wide') || /\b(expanded|wide|extended)\b/i.test(f.n))out.add('wide');
+  }
+  return out.size ? [...out] : ['unspecified'];
+}
+const WRITING_LABELS={'latin':'Latin','latin-ext':'Latin extended','cyrillic-ext':'Cyrillic extended','greek-ext':'Greek extended','chinese-simplified':'Chinese (Simplified)','chinese-traditional':'Chinese (Traditional)','chinese-hongkong':'Chinese (Hong Kong)','canadian-aboriginal':'Canadian Aboriginal','nko':'N’Ko','symbols2':'Symbols extended'};
+const writingLabel=k=>WRITING_LABELS[k] || k.split('-').map(w=>w[0].toUpperCase()+w.slice(1)).join(' ');
+const WRITINGS=Object.fromEntries([...new Set(F.flatMap(f=>f.subsets || []))].filter(k=>k!=='menu').map(k=>[k,writingLabel(k)]).sort((a,b)=>a[1].localeCompare(b[1])));
 function matches(f, set, k) {
+  if (set === 'category') return k==='serif' ? ['serif','slab'].includes(f.c) : k==='slab' ? f.c==='slab' || f.s.includes('serif:slab') : f.c===k;
+  if (set === 'width') return (f.widths || fontWidths(f)).includes(k);
+  if (set === 'writing') return (f.subsets || []).includes(k);
   if (set === 'source') return f.source === k;
   if (set === 'feel') return f.t.includes(k);
   if (set === 'use') return f.u.includes(k);
-  if (set === 'tech') return k === 'variable' ? !!f.v : f.a.includes(k);
+  if (set === 'tech') return k === 'variable' ? !!f.v : k === 'italic' ? f.noItal === false : f.a.includes(k);
   if (set === 'app') return k === 'mono' ? (f.c === 'mono' || f.a.includes('mono')) : k === 'display' ? f.c === 'display' : f.a.includes(k);
   if (k === 'serif:*') return f.c === 'serif' || f.c === 'slab' || f.s.some(x => x.startsWith('serif:'));
   if (k === 'sans:*') return f.c === 'sans' || f.s.some(x => x.startsWith('sans:'));
@@ -424,15 +453,15 @@ const autoBlurb = f => {
   const uses = f.u.slice(0, 2).map(u => USES[u].toLowerCase());
   return `${art} ${k} typeface${by}${pub}.${uses.length ? ` Suited to ${uses.join(' and ')}.` : ''}`;
 };
-F.forEach(f => { if (!f.b) f.b = autoBlurb(f); f.hay = [f.n, f.d, f.p, f.b, ...(f.subsets || []), ...(f.labels?.keywords || []),f.tags||'',f.manual?'external imported manually added licence unverified local':'', CLS[f.c], kindLabel(f), ...f.s.map(x => SUBS[x]), ...f.a.map(x => APPEAR[x] || x), ...f.u.map(x => USES[x]), ...f.t.map(x => THEMES[x])].join(' ').toLowerCase(); });
+F.forEach(f => { f.widths=fontWidths(f); if (!f.b) f.b = autoBlurb(f); f.hay = [f.n, f.d, f.p, f.b, ...(f.subsets || []), ...(f.labels?.keywords || []),f.tags||'',f.manual?'external imported manually added licence unverified local':'', CLS[f.c], kindLabel(f), ...f.s.map(x => SUBS[x]), ...f.a.map(x => APPEAR[x] || x), ...f.u.map(x => USES[x]), ...f.t.map(x => THEMES[x])].join(' ').toLowerCase(); });
 function syncLocalRegistry(){
  const records=desktop.enabled?desktop.localFonts():window.OpenShelfLocal.records();
  F.filter(f=>f.manual).forEach(f=>{delete BY[f.slug];});
  for(let i=F.length-1;i>=0;i--)if(F[i].manual)F.splice(i,1);
- records.map(localFont).forEach(f=>{f.hay=[f.n,f.d,f.b,f.tags,CLS[f.c],'external imported manually added licence unverified local'].join(' ').toLowerCase();F.push(f);BY[f.slug]=f;});
+ records.map(localFont).forEach(f=>{f.widths=fontWidths(f);f.hay=[f.n,f.d,f.b,f.tags,CLS[f.c],'external imported manually added licence unverified local'].join(' ').toLowerCase();F.push(f);BY[f.slug]=f;});
  normaliseCols();saveCols();
 }
-const filterLabel = (set, k) => set === 'source' ? SOURCES[k] : set === 'feel' ? THEMES[k] : set === 'use' ? USES[k] : set === 'app' ? APPEAR[k] : set === 'tech' ? (k === 'color' ? 'Colour font' : 'Variable') : SUBS[k];
+const filterLabel = (set,k) => set==='writing' ? writingLabel(k) : SECTIONS.find(s=>s.set===set)?.opts?.[k] || APPEAR[k] || SUBS[k] || k;
 
 /* ---------- pairings ----------
    prov: family = designed together, classic = long-standing web classic, modern = contemporary favourite */
@@ -507,7 +536,7 @@ function allCollections(){if(!desktop.enabled)return state.cols;enabledCollectio
 const state = {
   text: store.get('text', ''), size: store.get('size', 48), layout: store.get('layout', 'list'),
   collectionLayout:store.get('collectionLayout','list'), collectionCols:store.get('collectionCols','2'), collectionProofOpen:store.get('collectionProofOpen',false), markerMenu:null,
-  gridCols:store.get('gridCols', '2'), limit:48, enabledOnly:desktop.enabled&&!!savedUI.enabledOnly, sort:savedUI.sort||'az', q:savedUI.q||'', f:{source:new Set(), feel:new Set(), app:new Set(), serif:new Set(), sans:new Set(), calli:new Set(), use:new Set(), tech:new Set()}, fmode: store.get('fmode', {}), col:savedUI.col||null,
+  gridCols:store.get('gridCols', '2'), limit:48, enabledOnly:desktop.enabled&&!!savedUI.enabledOnly, sort:savedUI.sort||'az', q:savedUI.q||'', f:{category:new Set(), width:new Set(), writing:new Set(), source:new Set(), feel:new Set(), app:new Set(), serif:new Set(), sans:new Set(), calli:new Set(), use:new Set(), tech:new Set()}, fmode: store.get('fmode', {}), col:savedUI.col||null,
   prov:savedUI.prov||'', mood:savedUI.mood||'',
   pair: store.get('pair', {h:'instrument-serif', b:'inter'}),
   locks:{h:false, b:false}, history:[],
@@ -540,7 +569,9 @@ window.addEventListener('pagehide',persistUI);document.addEventListener('visibil
 let preferenceTimer;for(const event of ['click','input','change'])document.addEventListener(event,()=>{clearTimeout(preferenceTimer);preferenceTimer=setTimeout(persistUI,250);});
 state.collectionLayout=state.collectionLayout==='grid'?'grid':'list';
 if(!/^(auto|[1-6])$/.test(state.collectionCols))state.collectionCols='2';
-state.fmode.source = 'any';
+for(const sec of SECTIONS)if(sec.any || sec.select)state.fmode[sec.set]='any';
+// Keep existing saved searches meaningful when moving width out of Appearance.
+for(const k of ['condensed','wide'])if(state.f.app.delete(k))state.f.width.add(k);
 if (![0,100,200,300,400,500,600,700,800,900].includes(state.weight)) state.weight = 0;
 if (!BY[state.pair.h] || !BY[state.pair.b]) state.pair = {h:'instrument-serif', b:'inter'};
 const HS_DEF = {w:0, i:false, size:72, ls:0, up:false}, BS_DEF = {w:0, i:false, size:18, lh:1.7};
@@ -712,33 +743,45 @@ const REP = {
   body:'source-serif-4', headlines:'montserrat', ui:'inter', longform:'literata', editorial:'newsreader', branding:'outfit', posters:'bebas-neue', code:'jetbrains-mono', data:'ibm-plex-mono', accessibility:'atkinson-hyperlegible', invitations:'great-vibes', packaging:'lobster',
   variable:'roboto-flex', color:'nabla'
 };
+let filterSamples;
 function buildPanel() {
-  const closed = new Set(store.get('fclosed', []));
+  const closed = new Set(store.get('fclosed', SECTIONS.filter(s=>!['category','width'].includes(s.id)).map(s=>s.id)));
   $('#fpanel').innerHTML = `
-    <div class="fp-head"><h2>Filters</h2><button class="linkbtn" data-action="clear">Reset</button><button class="ib fp-hide" data-action="fpanel-hide" aria-label="Hide filters" title="Hide filters"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M9.5 4.5v15M15.5 10l-2 2 2 2"/></svg></button><button class="ib fp-close" data-action="fpanel-close" aria-label="Close filters">${ICON.x}</button></div>
-    ${SECTIONS.map(sec => `<details class="fsec" data-sec="${sec.id}" ${closed.has(sec.id) ? '' : 'open'}>
+    <div class="fp-head"><h2>Filters</h2><button class="linkbtn" data-action="clear">Reset all</button><button class="ib fp-hide" data-action="fpanel-hide" aria-label="Hide filters" title="Hide filters"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M9.5 4.5v15M15.5 10l-2 2 2 2"/></svg></button><button class="ib fp-close" data-action="fpanel-close" aria-label="Close filters">${ICON.x}</button></div>
+    <p class="fp-intro">Find fonts by style, width and character.</p>
+    ${SECTIONS.map(sec => `<details class="fsec" data-sec="${sec.id}" ${closed.has(sec.id) && !state.f[sec.set].size ? '' : 'open'}>
       <summary><span>${sec.title}</span><span class="fsel" style="visibility:hidden">0</span>${ICON.chev}</summary>
-      ${sec.set === 'source' ? '' : `<div class="fmode" role="group" aria-label="How picks in ${sec.title} combine"><button data-action="fmode" data-set="${sec.set}" data-mode="all" title="Show fonts that have every pick">Match all</button><button data-action="fmode" data-set="${sec.set}" data-mode="any" title="Show fonts that have at least one pick">Match any</button></div>`}
-      <div class="fchips">${Object.entries(sec.opts).map(([k, l]) => {
-        if (sec.set!=='source' && !F.some(f => matches(f, sec.set, k))) return '';
-        const r = BY[REP[k]];
-        const ag = r ? `<span class="fag" aria-hidden="true" style="font-family:${fam(r)};font-weight:${pvWeight(r)}">${k === 'code' ? '{ }' : 'Ag'}</span>` : '';
-        return `<button class="fchip" data-action="fchip" data-set="${sec.set}" data-val="${k}" aria-pressed="false">${ag}${esc(l)}<span class="c"></span></button>`;
-      }).join('')}</div>
+      <div class="fsection-tools">
+        ${sec.any || sec.select ? `<span class="fmatch-note">${sec.select?'Choose a writing system':'Match any selection'}</span>` : `<div class="fmode" role="group" aria-label="How picks in ${sec.title} combine"><button data-action="fmode" data-set="${sec.set}" data-mode="any" title="Show fonts with at least one selection">Match any</button><button data-action="fmode" data-set="${sec.set}" data-mode="all" title="Show fonts with every selection">Match all</button></div>`}
+        <button class="linkbtn fsection-clear" data-action="clear-section" data-set="${sec.set}" aria-label="Clear ${sec.title} filters" hidden>Clear</button>
+      </div>
+      ${sec.select ? `<label class="fwriting-label" for="writing-filter">Supported writing system</label><select class="sel" id="writing-filter"><option value="">All writing systems</option>${Object.entries(WRITINGS).map(([k,l])=>`<option value="${esc(k)}">${esc(l)}</option>`).join('')}</select><p class="fsection-note">Based on the catalog’s character coverage. Coverage for external imports is not yet available.</p>` : `<div class="fchips ${['category','width'].includes(sec.set)?'fchips-tiles':''}">${Object.entries(sec.opts).map(([k,l])=>{
+        if(sec.set!=='source' && !F.some(f=>matches(f,sec.set,k)))return '';
+        const rep=sec.set==='category'?({sans:'inter',serif:'source-serif-4',slab:'roboto-slab',mono:'jetbrains-mono',display:'abril-fatface',script:'dancing-script'})[k]:sec.set==='width'?null:REP[k];
+        const r=BY[rep];
+        const ag=sec.set==='width'?`<span class="width-sample width-${k}" aria-hidden="true">${k==='adjustable'?'↔':k==='unspecified'?'?':'Aa'}</span>`:r?`<span class="fag" data-filter-sample="${r.slug}" aria-hidden="true" style="font-family:${fam(r)};font-weight:${pvWeight(r)}">${k==='code'?'{ }':'Ag'}</span>`:'';
+        return `<button class="fchip" data-action="fchip" data-set="${sec.set}" data-val="${k}" aria-pressed="false">${ag}<span class="fchip-label">${esc(l)}</span><span class="c"></span></button>`;
+      }).join('')}</div>`}
+      ${sec.note?`<p class="fsection-note">${sec.note}</p>`:''}
     </details>`).join('')}
-    <p class="fhint">Fonts must match every pick within a section. Switch a section to \u201cMatch any\u201d to see fonts with at least one of its picks.</p>
+    <p class="fhint">Different sections combine to narrow your results. Counts show matches for each option with your other sections applied.</p>
     <div class="fp-foot"><button class="btn primary" data-action="fpanel-close" id="fp-show">Show fonts</button></div>`;
-  [...new Set(Object.values(REP))].forEach(sl => { if (BY[sl] && !desktop.enabled) loadFont(BY[sl]); });
+  filterSamples?.disconnect();
+  if(!desktop.enabled && 'IntersectionObserver' in window){
+    filterSamples=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){loadFont(BY[e.target.dataset.filterSample]);filterSamples.unobserve(e.target);}}));
+    $$('#fpanel [data-filter-sample]').forEach(el=>filterSamples.observe(el));
+  }
 }
 function filterCtx() { return { q: state.q.trim().toLowerCase(), col: state.col ? getCol(state.col) : null }; }
 function passes(f, ctx, extra) {
   if (!available(f)||(state.enabledOnly&&!desktop.isEnabled(f))) return false;
   for (const set in state.f) {
+    if(extra?.set===set && extra.skip)continue;
     let sel = state.f[set];
     if (extra && extra.set === set) { sel = new Set(extra.only ? [] : sel); sel.add(extra.k); }
     if (!sel.size) continue;
     const arr = [...sel];
-    const ok = state.fmode[set] === 'any' ? arr.some(k => matches(f, set, k)) : arr.every(k => matches(f, set, k));
+    const ok = (state.fmode[set] || 'any') === 'any' ? arr.some(k => matches(f, set, k)) : arr.every(k => matches(f, set, k));
     if (!ok) return false;
   }
   if (state.exactW && state.weight && !f.w.includes(state.weight)) return false;
@@ -748,21 +791,25 @@ function passes(f, ctx, extra) {
 }
 function syncPanel(list) {
   const ctx = filterCtx();
+  // Reuse each section’s candidate pool instead of repeating every filter for every chip.
+  const candidates=Object.fromEntries(SECTIONS.filter(s=>!s.select).map(s=>[s.set,F.filter(f=>passes(f,ctx,{set:s.set,skip:true}))]));
   $$('#fpanel .fchip').forEach(b => {
     const set = b.dataset.set, k = b.dataset.val, on = state.f[set].has(k);
     b.setAttribute('aria-pressed', String(on));
-    const n = set === 'source' ? F.filter(f => passes(f, ctx, {set, k, only:true})).length : on ? list.filter(f => matches(f, set, k)).length : F.filter(f => passes(f, ctx, {set, k})).length;
+    const n = candidates[set].filter(f=>matches(f,set,k)).length;
     $('.c', b).textContent = n; b.classList.toggle('zero', !n && !on);
   });
-  $$('#fpanel .fmode button').forEach(b => b.setAttribute('aria-pressed', String((state.fmode[b.dataset.set] || 'all') === b.dataset.mode)));
+  $$('#fpanel .fmode button').forEach(b => b.setAttribute('aria-pressed', String((state.fmode[b.dataset.set] || 'any') === b.dataset.mode)));
   $$('#fpanel .fsec').forEach(d => {
     const sec = SECTIONS.find(x => x.id === d.dataset.sec);
     const c = state.f[sec.set].size;
+    $('.fsection-clear',d).hidden=!c;
     const b = $('.fsel', d); b.textContent = c || 0; b.style.visibility = c ? 'visible' : 'hidden';
   });
+  $('#writing-filter').value=[...state.f.writing][0] || '';
   const total = Object.values(state.f).reduce((a, x) => a + x.size, 0) + (state.exactW ? 1 : 0) + (state.col ? 1 : 0);
   const fc = $('#fcount'); fc.textContent = total; fc.hidden = !total;
-  $('#fp-show').textContent = list.length === 1 ? 'Show 1 font' : `Show ${list.length} fonts`;
+  $('#fp-show').textContent = list.length === 1 ? 'Show 1 font' : `Show ${list.length.toLocaleString()} fonts`;
 }
 function filtered() {
   const ctx = filterCtx();
@@ -1446,6 +1493,7 @@ document.addEventListener('click', e => {
   const t = e.target.closest('[data-action]'); if (!t) return;
   const a = t.dataset.action;
   switch (a) {
+    case 'clear-section': state.f[t.dataset.set].clear(); refilter(); break;
     case 'fchip': { const set = state.f[t.dataset.set]; set.has(t.dataset.val) ? set.delete(t.dataset.val) : set.add(t.dataset.val); refilter(); break; }
     case 'fpanel-hide': setFPHidden(true); $('[data-action="fpanel-open"]').focus(); break;
     case 'fpanel-open': if (matchMedia('(min-width: 901px)').matches) { setFPHidden(false); const h = $('#fpanel .fp-hide'); if (h) h.focus(); break; } $('#view-library').getAnimations().forEach(a=>a.cancel());document.body.classList.add('filters-open');$('#fpanel').classList.add('on'); t.setAttribute('aria-expanded', 'true'); setTimeout(() => { const c = $('#fpanel .fp-close'); if (c) c.focus(); }, 50); break;
@@ -1456,7 +1504,7 @@ document.addEventListener('click', e => {
     case 'shuffle': reshuffle(); state.sort = 'random'; renderLibrary(); break;
     case 'unfilter': { const g = t.dataset.group; if (g === 'exactw') state.exactW = false; else if (g === 'col') state.col = null; else if (state.f[g]) state.f[g].delete(t.dataset.val); refilter(); break; }
     case 'clear': clearFilters(); refilter(); break;
-    case 'filterto': { clearFilters(); const g = t.dataset.group === 'cls' ? t.dataset.val.split(':')[0] : t.dataset.group; state.f[g].add(t.dataset.val); } if (location.hash === '#/' || location.hash === '') renderLibrary(); else location.hash = '#/'; break;
+    case 'filterto': { clearFilters(); const g = t.dataset.group === 'cls' ? t.dataset.val.split(':')[0] : t.dataset.group==='app' && ['condensed','wide'].includes(t.dataset.val) ? 'width' : t.dataset.group; state.f[g].add(t.dataset.val); } if (location.hash === '#/' || location.hash === '') renderLibrary(); else location.hash = '#/'; break;
     case 'fav': { const s = t.dataset.slug; setFont('favs', s); refreshFav(s); pulse(t); toast(isFav(s) ? `Added ${BY[s].n} to Favourites` : `Removed ${BY[s].n} from Favourites`); afterColChange(); break; }
     case 'save': {
       if (!p.hidden && p._anchor === t) { closePop(); break; }
@@ -1507,6 +1555,7 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('change', e => {
   const t = e.target;
+  if(t.id==='writing-filter'){state.f.writing.clear();if(t.value)state.f.writing.add(t.value);refilter();return;}
   if (t.matches('select[data-adj]')) { const [sd, k] = t.dataset.adj.split('.'); state.pair[sd][k] = +t.value; renderBuilder(); return; }
   if (t.matches('select[data-card="w"]')) { const sl = t.dataset.slug; state.card[sl] = Object.assign({}, state.card[sl], {w: +t.value}); replaceCard(sl, 'select[data-card="w"]'); return; }
   if (t.matches('#pop input[data-col]')) {
