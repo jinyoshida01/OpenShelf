@@ -537,7 +537,9 @@ html:not(.desktop-app) .results.grid .font-device-controls{width:auto;margin-lef
 .collections-workspace .ci::before{content:'';position:absolute;top:0;left:20px;width:58px;height:5px;border-radius:0 0 5px 5px;background:var(--marker,var(--muted))}
 .collections-workspace .collection-label-button{width:44px;height:40px;border:1px solid var(--line2);border-radius:5px 10px 10px 10px;background:var(--raise);color:var(--marker,var(--text))}
 .collections-workspace .ci-head{flex-wrap:wrap;gap:6px 12px}.collections-workspace .ci-name{flex:1;min-width:80px}.collections-workspace .ci-count{color:var(--muted)}
-.collections-workspace .ci .ci-row{background:var(--raise)}
+.collections-workspace .ci[data-collection-layout=grid] .ci-row{background:var(--raise)}
+.collections-workspace .ci[data-collection-layout=list] .ci-row{background:transparent;padding:14px 0}
+.collections-workspace .ci[data-collection-layout=list] .ci-row+.ci-row{border-top:1px solid var(--line2)}
 .local-layout-options{display:flex;align-items:center;justify-content:flex-end;gap:14px;margin-left:auto}.local-layout-options .local-layout{margin:0}.local-columns[hidden]{display:none}
 .local-grid[data-layout=grid]{grid-template-columns:repeat(var(--local-cols,2),minmax(0,1fr))}.local-grid[data-layout=grid][style*="--local-cols:auto"]{grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr))}.local-card{min-width:0}.local-card .actions{flex-wrap:wrap}.local-card .font-head h2{overflow-wrap:anywhere}
 .manual-badge{background:var(--raise2);color:var(--text)}
@@ -547,3 +549,6 @@ html:not(.desktop-app) .results.grid .font-device-controls{width:auto;margin-lef
 @media(max-width:900px){.collections-workspace .dr-list[data-folder-layout=grid]{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.local-grid[data-layout=grid]{grid-template-columns:1fr}.local-view-tools{flex-wrap:wrap}.collections-workspace .dr-list[data-folder-layout=grid]{grid-template-columns:1fr}}
 .collection-label-icon{position:relative;display:grid;place-items:center}.collection-label-icon .folder-icon{width:27px;height:27px}.folder-symbol{position:absolute;top:9px;left:10px;font:10px/1 system-ui;color:var(--marker,var(--text))}
+
+/* Keep imported-font provenance and licence status visually separate. */
+.spaced-meta{display:inline-flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px}.spaced-meta>span{white-space:nowrap}.spaced-meta>span+span::before{content:"·";margin-right:12px;color:var(--muted)}.manual-badge.spaced-meta{align-self:flex-start;max-width:100%}
