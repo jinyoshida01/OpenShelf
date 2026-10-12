@@ -51,6 +51,8 @@ pub struct Record {
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct Library {
     #[serde(default)]
+    pub download_dir: Option<PathBuf>,
+    #[serde(default)]
     pub fonts: BTreeMap<String, Record>,
     #[serde(default)]
     pub groups: BTreeMap<String, BTreeSet<String>>,
@@ -67,6 +69,7 @@ pub struct ManagerState {
 }
 #[derive(Serialize)]
 pub struct Snapshot {
+    pub download_dir: String,
     pub fonts: Vec<Record>,
     pub active: Vec<String>,
     pub groups: BTreeMap<String, BTreeSet<String>>,
@@ -156,6 +159,205 @@ pub fn font_file(path: &Path, bytes: &[u8]) -> Result<FontFile, String> {
 fn disk_key(id: &str) -> String {
     format!("{:x}", Sha256::digest(id.as_bytes()))
 }
+
+pub fn font_root(app: &AppHandle, data: &Library) -> Result<PathBuf, String> {
+    Ok(data
+        .download_dir
+        .clone()
+        .unwrap_or(root(app)?.join("fonts")))
+}
+fn folder_name(family: &str) -> String {
+    let value: String = family
+        .chars()
+        .take(100)
+        .map(|c| {
+            if c.is_control() || "<>:\"/\\|?*".contains(c) {
+                '_'
+            } else {
+                c
+            }
+        })
+        .collect();
+    let value = value.trim().trim_matches('.').trim();
+    let base = value.split('.').next().unwrap_or("").to_uppercase();
+    if value.is_empty() {
+        "Font".into()
+    } else if [
+        "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8",
+        "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+    ]
+    .contains(&base.as_str())
+    {
+        format!("{value} font")
+    } else {
+        value.into()
+    }
+}
+fn family_destination(root: &Path, family: &str, id: &str) -> PathBuf {
+    let name = folder_name(family);
+    let mut dest = root.join(&name);
+    let suffix = &disk_key(id)[..8];
+    let mut n = 0;
+    while dest.exists() {
+        n += 1;
+        dest = root.join(if n == 1 {
+            format!("{name} - {suffix}")
+        } else {
+            format!("{name} - {suffix}-{n}")
+        });
+    }
+    dest
+}
+fn rebase_record(record: &mut Record, dest: &Path) -> Result<(), String> {
+    for f in &mut record.files {
+        let name = Path::new(&f.path)
+            .file_name()
+            .ok_or("Invalid font filename")?;
+        f.path = dest.join(name).to_string_lossy().into();
+    }
+    Ok(())
+}
+// Run before restoring activation. Roll back folder renames if metadata cannot be saved.
+pub fn migrate_names(app: &AppHandle, data: &mut Library) -> Result<(), String> {
+    let base = font_root(app, data)?;
+    rename_folders(data, &base, |next| save(app, next))
+}
+fn rename_folders(
+    data: &mut Library,
+    base: &Path,
+    persist: impl FnOnce(&Library) -> Result<(), String>,
+) -> Result<(), String> {
+    let mut next = data.clone();
+    let mut moved: Vec<(PathBuf, PathBuf)> = vec![];
+    let result = (|| {
+        for record in next.fonts.values_mut() {
+            let old = base.join(disk_key(&record.id));
+            if !old.is_dir()
+                || !record
+                    .files
+                    .iter()
+                    .all(|f| Path::new(&f.path).parent() == Some(old.as_path()))
+            {
+                continue;
+            }
+            let dest = family_destination(&base, &record.family, &record.id);
+            fs::rename(&old, &dest).map_err(|e| e.to_string())?;
+            moved.push((old, dest.clone()));
+            rebase_record(record, &dest)?;
+        }
+        if !moved.is_empty() {
+            persist(&next)?;
+        }
+        Ok::<_, String>(())
+    })();
+    if let Err(e) = result {
+        for (old, new) in moved.into_iter().rev() {
+            let _ = fs::rename(new, old);
+        }
+        return Err(e);
+    }
+    *data = next;
+    Ok(())
+}
+fn copy_family(source: &Path, dest: &Path) -> Result<(), String> {
+    fs::create_dir(dest).map_err(|e| e.to_string())?;
+    for entry in fs::read_dir(source).map_err(|e| e.to_string())? {
+        let entry = entry.map_err(|e| e.to_string())?;
+        if !entry.file_type().map_err(|e| e.to_string())?.is_file() {
+            return Err("The font folder contains an unexpected subfolder or link".into());
+        }
+        let bytes = fs::read(entry.path()).map_err(|e| e.to_string())?;
+        let target = dest.join(entry.file_name());
+        fs::write(&target, &bytes).map_err(|e| e.to_string())?;
+        if Sha256::digest(&bytes) != Sha256::digest(fs::read(target).map_err(|e| e.to_string())?) {
+            return Err("Font copy verification failed".into());
+        }
+    }
+    Ok(())
+}
+#[tauri::command]
+pub async fn open_download_folder(
+    app: AppHandle,
+    state: tauri::State<'_, ManagerState>,
+) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt;
+    let path = font_root(&app, &*state.data.lock().await)?;
+    fs::create_dir_all(&path).map_err(|e| e.to_string())?;
+    app.opener()
+        .open_path(path.to_string_lossy().as_ref(), None::<&str>)
+        .map_err(|e| e.to_string())
+}
+#[tauri::command]
+pub async fn choose_download_folder(
+    app: AppHandle,
+    state: tauri::State<'_, ManagerState>,
+) -> Result<bool, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let _job = state
+        .download_lock
+        .try_lock()
+        .map_err(|_| "A library operation is already running")?;
+    let Some(picked) = app
+        .dialog()
+        .file()
+        .set_title("Choose where to create your OpenShelf Fonts folder")
+        .blocking_pick_folder()
+    else {
+        return Ok(false);
+    };
+    let parent = picked
+        .into_path()
+        .map_err(|e| e.to_string())?
+        .canonicalize()
+        .map_err(|e| e.to_string())?;
+    let mut data = state.data.lock().await;
+    let old_root = font_root(&app, &data)?;
+    if parent.starts_with(&old_root) {
+        return Err("Choose a location outside the current font folder".into());
+    }
+    let dest = family_destination(&parent, "OpenShelf Fonts", "library");
+    let temp = tempfile::tempdir_in(&parent).map_err(|e| e.to_string())?;
+    let mut next = data.clone();
+    for record in next.fonts.values_mut() {
+        let source = PathBuf::from(&record.files.first().ok_or("No stored font files")?.path)
+            .parent()
+            .ok_or("Invalid font folder")?
+            .to_path_buf();
+        let target = family_destination(temp.path(), &record.family, &record.id);
+        copy_family(&source, &target)?;
+        rebase_record(record, &dest.join(target.file_name().unwrap()))?;
+    }
+    fs::rename(temp.path(), &dest).map_err(|e| e.to_string())?;
+    app.asset_protocol_scope()
+        .allow_directory(&dest, true)
+        .map_err(|e| e.to_string())?;
+    next.download_dir = Some(dest);
+    let ids: Vec<String> = state
+        .active
+        .lock()
+        .map_err(|_| "Activation is busy")?
+        .iter()
+        .cloned()
+        .collect();
+    let result = (|| {
+        for id in &ids {
+            set_record(&data.fonts[id], false)?;
+        }
+        for id in &ids {
+            set_record(&next.fonts[id], true)?;
+        }
+        save(&app, &next)
+    })();
+    if let Err(error) = result {
+        for id in &ids {
+            let _ = set_record(&next.fonts[id], false);
+            let _ = set_record(&data.fonts[id], true);
+        }
+        return Err(error);
+    }
+    *data = next;
+    Ok(true)
+}
 fn check_url(url: &str) -> Result<(), String> {
     let u = reqwest::Url::parse(url).map_err(|_| "Invalid download URL")?;
     if u.scheme() != "https"
@@ -210,6 +412,7 @@ pub async fn device_state(
 ) -> Result<Snapshot, String> {
     let data = state.data.lock().await;
     Ok(Snapshot {
+        download_dir: font_root(&app, &data)?.to_string_lossy().into(),
         fonts: data.fonts.values().cloned().collect(),
         active: state
             .active
@@ -271,10 +474,10 @@ pub async fn download_family(
         .ok_or("Installable files are not available for this family")?
         .clone();
     state.cancel.store(false, Ordering::Relaxed);
-    let fonts_root = root(&app)?.join("fonts");
+    let fonts_root = font_root(&app, &*state.data.lock().await)?;
     fs::create_dir_all(&fonts_root).map_err(|e| e.to_string())?;
     let temp = tempfile::tempdir_in(&fonts_root).map_err(|e| e.to_string())?;
-    let dest = fonts_root.join(disk_key(&id));
+    let dest = family_destination(&fonts_root, &f.family, &id);
     let mut files = vec![];
     let mut total = 0u64;
     for (i, a) in f.licences.iter().chain(&f.files).enumerate() {
@@ -400,6 +603,10 @@ pub async fn import_fonts(
         .add_filter("Desktop fonts", &["ttf", "otf"])
         .blocking_pick_files();
     let Some(picked) = picked else { return Ok(0) };
+    let _job = state
+        .download_lock
+        .try_lock()
+        .map_err(|_| "A library operation is already running")?;
     let mut added = 0;
     for p in picked {
         let path = p.into_path().map_err(|e| e.to_string())?;
@@ -413,14 +620,13 @@ pub async fn import_fonts(
         if data.fonts.contains_key(&id) {
             continue;
         }
-        let dest = root(&app)?.join("fonts").join(disk_key(&id));
+        let fonts_root = font_root(&app, &data)?;
         let ext = if bytes.starts_with(b"OTTO") {
             "otf"
         } else {
             "ttf"
         };
-        let target = dest.join(format!("font.{ext}"));
-        let file = font_file(&target, &bytes)?;
+
         let face = ttf_parser::Face::parse(&bytes, 0).map_err(|_| "Invalid font")?;
         let family = face
             .names()
@@ -440,6 +646,9 @@ pub async fn import_fonts(
                     .to_string_lossy()
                     .into()
             });
+        let dest = family_destination(&fonts_root, &family, &id);
+        let target = dest.join(format!("font.{ext}"));
+        let file = font_file(&target, &bytes)?;
         fs::create_dir_all(&dest).map_err(|e| e.to_string())?;
         fs::write(&target, &bytes).map_err(|e| e.to_string())?;
         let mut next = data.clone();
@@ -484,16 +693,25 @@ pub async fn export_fonts(
     let out = parent.join(format!("OpenShelf fonts {stamp}"));
     fs::create_dir(&out).map_err(|e| e.to_string())?;
     let mut portable = data.clone();
+    portable.download_dir = None;
     for r in portable.fonts.values_mut() {
-        let dir = out.join(disk_key(&r.id));
+        let source = PathBuf::from(&r.files.first().ok_or("No stored font files")?.path)
+            .parent()
+            .ok_or("Invalid font folder")?
+            .to_path_buf();
+        let dir = family_destination(&out, &r.family, &r.id);
         fs::create_dir(&dir).map_err(|e| e.to_string())?;
         for file in &mut r.files {
             let old = PathBuf::from(&file.path);
             let name = old.file_name().ok_or("Invalid stored filename")?;
             fs::copy(&old, dir.join(name)).map_err(|e| e.to_string())?;
-            file.path = format!("{}/{}", disk_key(&r.id), name.to_string_lossy());
+            file.path = format!(
+                "{}/{}",
+                dir.file_name().unwrap().to_string_lossy(),
+                name.to_string_lossy()
+            );
         }
-        let source = root(&app)?.join("fonts").join(disk_key(&r.id));
+
         for entry in fs::read_dir(source).map_err(|e| e.to_string())? {
             let p = entry.map_err(|e| e.to_string())?.path();
             if p.extension().is_some_and(|e| e == "txt") {
@@ -529,6 +747,57 @@ mod tests {
             tags: "".into(),
             manual: false,
         }
+    }
+    #[test]
+    fn readable_names_are_safe_and_collisions_are_preserved() {
+        assert_eq!(folder_name("ABeeZee"), "ABeeZee");
+        assert_eq!(folder_name("../A:B/C*"), "_A_B_C_");
+        assert_eq!(folder_name("CON"), "CON font");
+        let dir = tempfile::tempdir().unwrap();
+        fs::create_dir(dir.path().join("ABeeZee")).unwrap();
+        assert_ne!(
+            family_destination(dir.path(), "ABeeZee", "a"),
+            dir.path().join("ABeeZee")
+        );
+    }
+    #[test]
+    fn folder_migration_rolls_back_when_metadata_save_fails() {
+        let dir = tempfile::tempdir().unwrap();
+        let old = dir.path().join(disk_key("a"));
+        fs::create_dir(&old).unwrap();
+        fs::write(old.join("font.ttf"), b"test").unwrap();
+        let mut d = Library::default();
+        let mut r = record();
+        r.files.push(FontFile {
+            path: old.join("font.ttf").to_string_lossy().into(),
+            weight: "400".into(),
+            style: "normal".into(),
+        });
+        d.fonts.insert("a".into(), r);
+        assert!(rename_folders(&mut d, dir.path(), |_| Err("disk full".into())).is_err());
+        assert!(old.join("font.ttf").exists());
+        assert!(Path::new(&d.fonts["a"].files[0].path).exists());
+        rename_folders(&mut d, dir.path(), |_| Ok(())).unwrap();
+        assert!(!old.exists());
+        assert_eq!(fs::read(dir.path().join("A/font.ttf")).unwrap(), b"test");
+        assert!(Path::new(&d.fonts["a"].files[0].path).exists());
+    }
+    #[test]
+    fn location_copy_preserves_fonts_licences_and_originals() {
+        let dir = tempfile::tempdir().unwrap();
+        let old = dir.path().join("original");
+        fs::create_dir(&old).unwrap();
+        fs::write(old.join("font.ttf"), b"font bytes").unwrap();
+        fs::write(old.join("OFL.txt"), b"licence").unwrap();
+        let new = dir.path().join("new");
+        copy_family(&old, &new).unwrap();
+        for name in ["font.ttf", "OFL.txt"] {
+            assert_eq!(
+                fs::read(old.join(name)).unwrap(),
+                fs::read(new.join(name)).unwrap()
+            );
+        }
+        assert!(copy_family(&old, &new).is_err());
     }
     #[test]
     fn collection_overlap_preserves_activation() {

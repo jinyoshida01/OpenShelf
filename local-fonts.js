@@ -5,7 +5,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const cats = {sans:'Sans serif',serif:'Serif',slab:'Slab serif',mono:'Monospace',display:'Display',script:'Script'};
 const useOptions = ['Body text','Headlines','Interfaces & apps','Long-form reading','Editorial & magazines','Branding & logos','Posters & signage','Code & terminals','Data & dashboards','Accessibility','Invitations & cards','Packaging & labels'];
 const feelOptions = ['Business','Calm','Modern','Classic','Sophisticated','Fancy','Friendly','Playful','Vintage','Loud','Technical','Quirky'];
-let dbPromise, records=[], faces=new Map(), query='', category='', editing=null, notice='', failed=new Set(), booted=false, change=()=>{};
+let dbPromise, records=[], faces=new Map(), query=localStorage.getItem('openshelf:localQuery')||'', category=localStorage.getItem('openshelf:localCategory')||'', editing=null, notice='', failed=new Set(), booted=false, change=()=>{};
 const container = () => document.querySelector('#view-local');
 function db() {
   if (!dbPromise) dbPromise = new Promise((resolve,reject) => {
@@ -82,7 +82,7 @@ async function importOne(file,meta={}){
 }
 function download(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 document.addEventListener('change',async e=>{
-  if(e.target.id==='local-category'){category=e.target.value;list();return;}
+  if(e.target.id==='local-category'){category=e.target.value;localStorage.setItem('openshelf:localCategory',category);list();return;}
   if(!['local-files','local-backup'].includes(e.target.id))return;
   const files=Array.from(e.target.files);const status=container().querySelector('#local-notice');status.textContent='Importing…';e.target.disabled=true;
   let added=0,duplicates=0,errors=[];
@@ -96,7 +96,7 @@ document.addEventListener('change',async e=>{
   }catch(err){notice=err.message;}
   render();
 });
-document.addEventListener('input',e=>{if(e.target.id==='local-search'){query=e.target.value;list();}if(e.target.id==='proof-input')document.querySelectorAll('[data-local-preview]').forEach(x=>x.textContent=previewText());});
+document.addEventListener('input',e=>{if(e.target.id==='local-search'){query=e.target.value;localStorage.setItem('openshelf:localQuery',query);list();}if(e.target.id==='proof-input')document.querySelectorAll('[data-local-preview]').forEach(x=>x.textContent=previewText());});
 document.addEventListener('submit',async e=>{
   if(e.target.id!=='local-editor')return;e.preventDefault();const r=records.find(x=>x.id===editing);const data=new FormData(e.target);const next={...r};for(const k of ['name','category','designer','publisher','year','license','style','description','tags'])next[k]=String(data.get(k)||'').trim();next.weight=+data.get('weight');next.uses=data.getAll('uses');next.feelings=data.getAll('feelings');
   try{await transaction('readwrite',s=>s.put(next));document.fonts.delete(faces.get(next.id));faces.delete(next.id);await install(next);records[records.indexOf(r)]=next;editing=null;notice='Details saved.';render();}catch(err){container().querySelector('#local-notice').textContent='Could not save details: '+err.message;}

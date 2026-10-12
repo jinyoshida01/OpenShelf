@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 const esc=s=>String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let query='',kind='Lesson',topic='',limit=24;
+let query=localStorage.getItem('openshelf:knowledgeQuery')||'',kind=localStorage.getItem('openshelf:knowledgeKind')??'Lesson',topic=localStorage.getItem('openshelf:knowledgeTopic')||'',limit=24;
 function results(){
  const data=window.OPEN_SHELF_KNOWLEDGE; const box=document.querySelector('#knowledge-results');
  const list=data.articles.filter(a=>(!kind||a.kind===kind)&&(!topic||a.topic===topic)&&(!query||[a.title,a.excerpt,a.topic,...a.authors].join(' ').toLowerCase().includes(query.toLowerCase())));
@@ -13,9 +13,9 @@ function show(){
  document.title='Knowledge | OpenShelf';const data=window.OPEN_SHELF_KNOWLEDGE;
  document.querySelector('#view-knowledge').innerHTML=`<header class="page-head knowledge-head"><h1>Typography articles</h1><p><span class="copy-line">Browse lessons and glossary entries from Google Fonts Knowledge.</span> <span class="copy-line">Select an article to read it on Google Fonts.</span></p><div class="page-meta"><p class="meta">Excerpts and thumbnails by the credited authors and Google Fonts Knowledge, shared under <a class="keep-together" href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license">CC BY-SA 4.0</a>.</p><p class="meta meta-row"><a href="https://github.com/google/fonts/tree/main/cc-by-sa/knowledge">Source on GitHub</a><span>Updated <time datetime="${esc(data.updatedAt)}">${esc(data.updatedAt)}</time></span></p></div></header><div class="knowledge-tools"><label class="searchwrap">Search articles<input id="knowledge-search" type="search" placeholder="Try pairing, spacing or accessibility" value="${esc(query)}"></label><label>Read<select id="knowledge-kind" class="sel"><option value="Lesson" ${kind==='Lesson'?'selected':''}>Lessons</option><option value="Glossary" ${kind==='Glossary'?'selected':''}>Glossary</option><option value="" ${!kind?'selected':''}>Everything</option></select></label><label>Topic<select id="knowledge-topic" class="sel"><option value="">All topics</option>${[...new Set(data.articles.map(a=>a.topic))].sort().map(t=>`<option ${topic===t?'selected':''}>${esc(t)}</option>`).join('')}</select></label></div><p id="knowledge-count" class="count"></p><div class="knowledge-grid" id="knowledge-results"></div><button class="btn load-more" id="knowledge-more">Load more articles</button>`;
  results();
- document.querySelector('#knowledge-search').addEventListener('input',e=>{query=e.target.value;limit=24;results();});
- document.querySelector('#knowledge-kind').addEventListener('change',e=>{kind=e.target.value;limit=24;results();});
- document.querySelector('#knowledge-topic').addEventListener('change',e=>{topic=e.target.value;limit=24;results();});
+ document.querySelector('#knowledge-search').addEventListener('input',e=>{query=e.target.value;localStorage.setItem('openshelf:knowledgeQuery',query);limit=24;results();});
+ document.querySelector('#knowledge-kind').addEventListener('change',e=>{kind=e.target.value;localStorage.setItem('openshelf:knowledgeKind',kind);limit=24;results();});
+ document.querySelector('#knowledge-topic').addEventListener('change',e=>{topic=e.target.value;localStorage.setItem('openshelf:knowledgeTopic',topic);limit=24;results();});
  document.querySelector('#knowledge-more').addEventListener('click',()=>{limit+=24;results();});
 }
 window.OpenShelfKnowledge={show};

@@ -102,7 +102,7 @@ fn main() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
-            let data = library::read(app.handle())?;
+            let mut data = library::read(app.handle())?;
             // Recover our own session registrations after an interrupted exit.
             // Never touch fonts from outside this app's saved library.
             for record in data.fonts.values() {
@@ -110,6 +110,11 @@ fn main() {
                     let _ = platform::activate(std::path::Path::new(&file.path), false);
                 }
             }
+            if let Err(error) = library::migrate_names(app.handle(), &mut data) {
+                eprintln!("Font folder names unchanged: {error}");
+            }
+            app.asset_protocol_scope()
+                .allow_directory(library::font_root(app.handle(), &data)?, true)?;
             let mut system = font_kit::source::SystemSource::new()
                 .all_families()
                 .unwrap_or_default();
@@ -141,6 +146,8 @@ fn main() {
             library::edit_font,
             library::import_fonts,
             library::export_fonts,
+            library::open_download_folder,
+            library::choose_download_folder,
             check_update,
             install_update,
             open_external

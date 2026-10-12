@@ -500,17 +500,18 @@ const store = {
 
 /* ---------- state ---------- */
 const DEFAULT_RAND = { hCls:['serif','sans','display','slab'], bCls:['sans','serif'], theme:'', textOnly:true, contrast:true, varOnly:false, from:'' };
+const savedUI=store.get('uiPreferences',{});
 const state = {
   text: store.get('text', ''), size: store.get('size', 48), layout: store.get('layout', 'list'),
-  collectionLayout:store.get('collectionLayout','list'), collectionCols:store.get('collectionCols','2'), collectionProofOpen:false, markerMenu:null,
-  gridCols:store.get('gridCols', '2'), limit:48, sort:'az', q:'', f:{source:new Set(), feel:new Set(), app:new Set(), serif:new Set(), sans:new Set(), calli:new Set(), use:new Set(), tech:new Set()}, fmode: store.get('fmode', {}), col:null,
-  prov:'', mood:'',
+  collectionLayout:store.get('collectionLayout','list'), collectionCols:store.get('collectionCols','2'), collectionProofOpen:store.get('collectionProofOpen',false), markerMenu:null,
+  gridCols:store.get('gridCols', '2'), limit:48, sort:savedUI.sort||'az', q:savedUI.q||'', f:{source:new Set(), feel:new Set(), app:new Set(), serif:new Set(), sans:new Set(), calli:new Set(), use:new Set(), tech:new Set()}, fmode: store.get('fmode', {}), col:savedUI.col||null,
+  prov:savedUI.prov||'', mood:savedUI.mood||'',
   pair: store.get('pair', {h:'instrument-serif', b:'inter'}),
   locks:{h:false, b:false}, history:[],
   rand: Object.assign({}, DEFAULT_RAND, store.get('rand', {})),
   cols: store.get('cols', null), collectionText: String(store.get('collectionText', '')).slice(0,500),
-  weight: store.get('gw', 0), ital: store.get('gi', false), card:{}, exactW:false,
-  open: new Set(), renaming:null, importOpen:false, shuffle:{}
+  weight: store.get('gw', 0), ital: store.get('gi', false), card:savedUI.card||{}, exactW:!!savedUI.exactW,
+  open: new Set(store.get('openCollections',[])), renaming:null, importOpen:false, shuffle:{}
 };
 function cleanCollectionPreview(p) {
   return {mode:['name','page','custom'].includes(p?.mode) ? p.mode : 'name',text:String(p?.text || '').slice(0,500)};
@@ -529,6 +530,11 @@ function normaliseCols() {
   });
 }
 normaliseCols();
+if(state.col&&!state.cols.some(c=>c.id===state.col))state.col=null;
+for(const [key,values] of Object.entries(savedUI.filters||{}))if(state.f[key]&&Array.isArray(values))state.f[key]=new Set(values);
+function persistUI(){store.set('uiPreferences',{sort:state.sort,q:state.q,col:state.col,prov:state.prov,mood:state.mood,card:state.card,exactW:state.exactW,filters:Object.fromEntries(Object.entries(state.f).map(([k,v])=>[k,[...v]]))});store.set('openCollections',[...state.open]);store.set('collectionProofOpen',state.collectionProofOpen);}
+window.addEventListener('pagehide',persistUI);document.addEventListener('visibilitychange',()=>{if(document.hidden)persistUI();});
+let preferenceTimer;for(const event of ['click','input','change'])document.addEventListener(event,()=>{clearTimeout(preferenceTimer);preferenceTimer=setTimeout(persistUI,250);});
 state.collectionLayout=state.collectionLayout==='grid'?'grid':'list';
 if(!/^(auto|[1-6])$/.test(state.collectionCols))state.collectionCols='2';
 state.fmode.source = 'any';
@@ -1017,7 +1023,7 @@ function closeDrawer() {
   state.importOpen = false; state.renaming = null;
   if (!$('#view-collections').hidden) { renderCollectionsPage(); updateCollectionPreviews(); }
   if (drawerOpener && document.contains(drawerOpener)) drawerOpener.focus({preventScroll:true});
-  else $('[data-action="drawer"]', $('#view-collections').hidden ? $('.top') : $('#view-collections')).focus({preventScroll:true});
+  else $('[data-action="drawer"]', $('.top'))?.focus({preventScroll:true});
 }
 function collectionPreviewText(c, f) {
   return (c.preview.mode === 'custom' ? c.preview.text : c.preview.mode === 'page' ? state.collectionText : '') || f.n;
@@ -1051,8 +1057,16 @@ function collectionContent(scope) {
       <div class="dr-list">${state.cols.map(drawerItem).join('')}</div>`;
 }
 function renderCollectionsPage() {
-  $('#view-collections').innerHTML = `<header class="page-head"><h1>Collections</h1><p><span class="copy-line">Organise saved fonts and pairings for your projects.</span> <span class="copy-line">These are the same collections as the side panel, saved in this browser.</span></p></header><div class="collections-heading"><p class="count">${plural(state.cols.length, 'collection')} · ${plural(state.cols.reduce((n,c)=>n+c.fonts.length+c.pairs.length,0), 'saved item')}</p><button class="btn sm" data-action="drawer" aria-controls="drawer" aria-expanded="${drawerOpen()}">Open side panel</button></div><div class="collection-manager collections-workspace">${collectionContent('page')}</div>`;
+  $('#view-collections').innerHTML = `<header class="page-head"><h1>Collections</h1><p><span class="copy-line">Organise saved fonts and pairings for your projects.</span> <span class="copy-line">These are the same collections as the side panel, saved in this browser.</span></p></header><div class="collections-heading"><p class="count">${plural(state.cols.length, 'collection')} · ${plural(state.cols.reduce((n,c)=>n+c.fonts.length+c.pairs.length,0), 'saved item')}</p></div><div class="collection-manager collections-workspace">${collectionContent('page')}</div>`;
 }
+const collectionObserver='IntersectionObserver'in window?new IntersectionObserver(entries=>{for(const e of entries)if(e.isIntersecting){loadFont(BY[e.target.dataset.font],[Number(e.target.style.fontWeight)||400]);collectionObserver.unobserve(e.target);}},{rootMargin:'180px'}):null;
+function setDrawerWidth(value){const max=Math.min(800,innerWidth-32),min=Math.min(360,max);const width=Math.max(min,Math.min(max,Number(value)||470));document.documentElement.style.setProperty('--drawer-width',width+'px');const handle=$('.drawer-resize');if(handle){handle.setAttribute('aria-valuenow',Math.round(width));handle.setAttribute('aria-valuemax',max);}return width;}
+function setupDrawerResize(){const r=$('.drawer-resize');setDrawerWidth(store.get('drawerWidth',470));let startX=0,startWidth=0,frame=0,next=0;
+ r.addEventListener('pointerdown',e=>{startX=e.clientX;startWidth=$('#drawer').getBoundingClientRect().width;next=startWidth;r.setPointerCapture(e.pointerId);r.classList.add('drag');document.body.classList.add('resizing');e.preventDefault();});
+ r.addEventListener('pointermove',e=>{if(!r.classList.contains('drag'))return;next=startWidth+startX-e.clientX;if(!frame)frame=requestAnimationFrame(()=>{setDrawerWidth(next);frame=0;});});
+ const end=()=>{if(!r.classList.contains('drag'))return;cancelAnimationFrame(frame);frame=0;store.set('drawerWidth',setDrawerWidth(next||startWidth));r.classList.remove('drag');document.body.classList.remove('resizing');};r.addEventListener('pointerup',end);r.addEventListener('pointercancel',end);
+ r.addEventListener('keydown',e=>{let v=$('#drawer').getBoundingClientRect().width;if(e.key==='ArrowLeft')v+=20;else if(e.key==='ArrowRight')v-=20;else if(e.key==='Home')v=360;else if(e.key==='End')v=800;else return;e.preventDefault();store.set('drawerWidth',setDrawerWidth(v));});r.addEventListener('dblclick',()=>store.set('drawerWidth',setDrawerWidth(470)));}
+window.addEventListener('resize',()=>setDrawerWidth(store.get('drawerWidth',470)));
 function renderDrawer() {
   const active=document.activeElement, scope=active?.closest('#drawer')?'#drawer':'#view-collections';
   let focusSelector='';
@@ -1062,9 +1076,10 @@ function renderDrawer() {
   const d = $('#drawer');
   const pageActive = !drawerOpen() && !$('#view-collections').hidden;
   const scroll = $('.dr-body', d) ? $('.dr-body', d).scrollTop : 0;
-  d.innerHTML = `<div class="dr-head"><h2>Collections</h2><button class="ib" data-action="drawer-close" aria-label="Close collections">${ICON.x}</button></div><div class="dr-body collection-manager"><a class="drawer-page-link" href="#/collections">View all collections →</a>${collectionContent('drawer')}</div>`;
+  d.innerHTML = `<div class="drawer-resize" role="separator" tabindex="0" aria-label="Resize collections panel" aria-orientation="vertical" aria-valuemin="360" aria-valuemax="800"></div><div class="dr-head"><h2>Collections</h2><button class="ib" data-action="drawer-close" aria-label="Close collections">${ICON.x}</button></div><div class="dr-body collection-manager"><a class="drawer-page-link" href="#/collections">View all collections →</a>${collectionContent('drawer')}</div>`;
   if (!$('#view-collections').hidden) renderCollectionsPage();
-  state.cols.forEach(c => { if (state.open.has(c.id)) { c.fonts.forEach(s => loadFont(BY[s])); c.pairs.forEach(p => { loadFont(BY[p.h], [pairHW(p)]); loadFont(BY[p.b]); }); } });
+  collectionObserver?.disconnect();$$('.collection-specimen').filter(el=>el.offsetParent).forEach(el=>collectionObserver?collectionObserver.observe(el):loadFont(BY[el.dataset.font]));
+  setupDrawerResize();
   updateCollectionPreviews();
   if (!reducedMotion()) $$('[data-col-card]').filter(el=>el.offsetParent).forEach(el=>{
     const before=previousHeights.get((el.closest('#drawer')?'drawer:':'page:')+el.dataset.colCard), after=el.getBoundingClientRect().height;
@@ -1551,6 +1566,7 @@ desktop.connect({toast,collection:getCol,collections:()=>state.cols,refresh:()=>
   if(open){ if(!$('#view-library').hidden)renderLibrary();else if(!$('#view-local').hidden)desktop.showLocal();renderDrawer(); }
   else route();
 }});
+$('#q').value=state.q;$('#sort').value=state.sort;
 setupProof();
 renderMadeBy();
 $('#last-updated').classList.add('meta-row');
@@ -1577,6 +1593,7 @@ floatingCollections.innerHTML=ICON.save+'<span>Collections</span><span data-coll
 if('IntersectionObserver' in window)new IntersectionObserver(([e])=>{floatingCollections.hidden=e.isIntersecting;},{threshold:0}).observe($('.top'));
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&state.markerMenu){state.markerMenu=null;renderDrawer();}});
 updateColCount();
-window.addEventListener('hashchange', route);
+window.addEventListener('hashchange',()=>{store.set('lastRoute',location.hash);route();});
+if(!location.hash){const last=store.get('lastRoute','#/');if(/^#\//.test(last))history.replaceState(null,'',last);}
 route();
 })();
